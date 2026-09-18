@@ -237,14 +237,14 @@ export function aCompany() {
 
 export function aBackup() {
   return '<h3>Backup / Restore</h3>'
-    + '<p class="tiny">Data CMS tersimpan di localStorage browser ini. Untuk memindahkan ke komputer lain atau mengirim ke developer: <b>Download / Salin</b> JSON di bawah, lalu di tempat lain gunakan <b>Muat JSON</b>.</p>'
+    + '<p class="tiny">Data CMS tersimpan di database server. Format data 100% kompatibel dengan cadangan lama REV-6 (PRD §5). Gunakan <b>Muat JSON</b> untuk restore cadangan lama atau eksternal.</p>'
     + '<textarea id="expj" class="tj" style="margin:14px 0 10px" readonly>' + esc(JSON.stringify(dbRead(), null, 2)) + '</textarea>'
     + '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:26px"><button class="btn btn-line btn-sm" id="dlj">' + ic('download') + ' Download JSON</button><button class="btn btn-line btn-sm" id="cpj">Salin</button></div>'
     + '<h4 class="redlbl">Import / Muat JSON</h4>'
     + '<textarea id="impj" class="tj" placeholder="Tempel isi JSON backup di sini…" style="margin-bottom:10px"></textarea>'
     + '<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn btn-red btn-sm" id="impb">Muat JSON</button>'
     + '<button class="btn btn-sm" style="color:var(--red);border:1.5px solid var(--red);border-radius:9px;padding:10px 16px;font-weight:700;letter-spacing:.05em" id="rstb">Reset ke Default</button></div>'
-    + '<p class="tiny" style="margin-top:14px">Catatan produksi (PRD §11.4): pada versi live, CMS ini akan tersambung ke backend/database dengan autentikasi server-side — struktur data yang sama dapat dipakai langsung.</p>';
+    + '<p class="tiny" style="margin-top:14px">Data yang diimpor langsung disimpan ke database MySQL server dan ter-refresh di semua halaman website.</p>';
 }
 
 export function renderAdmin(tab) {
@@ -556,7 +556,7 @@ export function mountAdmin(seg, router, goHash) {
   if (T === 'company') {
     const f = qs('#coform');
     if (f) {
-      f.onsubmit = e => {
+      f.onsubmit = async e => {
         e.preventDefault();
         const fd = {};
         qa('input,textarea', f).forEach(el => fd[el.name] = el.value);
@@ -569,9 +569,21 @@ export function mountAdmin(seg, router, goHash) {
           video: (fd.video || '').trim()
         });
         if (fd.npw) {
-          const d = dbRead(), s = d.settings || {};
-          s.password = fd.npw;
-          DB.set('settings', s);
+          try {
+            const res = await authFetch('/api/auth/password', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ password: fd.npw })
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+              toast('Password admin diperbarui');
+            } else {
+              toast(data.message || 'Gagal update password');
+            }
+          } catch (err) {
+            toast('Gagal menghubungi server');
+          }
         }
         toast('Tersimpan');
         router(true);
@@ -612,11 +624,11 @@ export function mountAdmin(seg, router, goHash) {
     }
     const ib = qs('#impb');
     if (ib) {
-      ib.onclick = () => {
+      ib.onclick = async () => {
         try {
           const d = JSON.parse(qs('#impj').value);
           if (typeof d !== 'object' || !d || Array.isArray(d)) throw new Error('bukan objek');
-          dbWrite(d);
+          await DB.importBackup(d);
           toast('Data berhasil dimuat');
           router(true);
         } catch (e) {
