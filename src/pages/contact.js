@@ -32,7 +32,7 @@ export function mountContact(seg) {
     zone.innerHTML = t === 'rfq' ? rfqForm(seg[2] || '') : t === 'product' ? prodForm() : corpForm();
     const f = zone.querySelector('form');
     if (!f) return;
-    f.onsubmit = ev => {
+    f.onsubmit = async ev => {
       ev.preventDefault();
       let ok = true;
       qa('[required]', f).forEach(el => {
@@ -74,6 +74,22 @@ export function mountContact(seg) {
           clean[labelMap[k] || k] = (k === 'product' && dP().find(p => p.id === d[k])) ? dP().find(p => p.id === d[k]).name : d[k];
         }
       });
+
+      const leadType = t === 'rfq' ? 'rfq' : t === 'product' ? 'product' : 'corporate';
+      try {
+        const resp = await fetch('/api/leads', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: leadType, payload: clean })
+        });
+        if (resp.ok) {
+          const json = await resp.json();
+          if (json.ref) clean._serverRef = json.ref;
+        }
+      } catch (err) {
+        console.warn('[Leads Sync] Server submission error, using local fallback:', err.message);
+      }
+
       zone.innerHTML = okCard(t === 'rfq' ? 'rfq' : 'inq', clean);
       const again = qs('#okagain');
       if (again) again.onclick = () => { paint(t); };
