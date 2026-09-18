@@ -1,0 +1,5 @@
+﻿export const NEWS = [
+{date:'Sep 2026',cat:{en:'Company',id:'Perusahaan'},t:{en:'JICOS dashboard rollout completed across all production lines',id:'Rollout dashboard JICOS selesai di seluruh line produksi'},d:{en:'Real-time output, quality and delivery monitoring is now standard on every line.',id:'Pemantauan output, kualitas, dan pengiriman real time kini menjadi standar di semua line.'}},
+{date:'Aug 2026',cat:{en:'Factory',id:'Pabrik'},t:{en:'New blown-film line starts operation — capacity +15%',id:'Line blown film baru mulai beroperasi — kapasitas +15%'},d:{en:'The third PE line widens our film capability up to 1,600 mm for export-scale coil protection.',id:'Line PE ketiga memperluas kapabilitas film hingga 1.600 mm untuk proteksi coil skala ekspor.'}},
+{date:'Jul 2026',cat:{en:'Kaizen',id:'Kaizen'},t:{en:'Kaizen convention: 48 improvement proposals from the floor',id:'Konvensi Kaizen: 48 usulan perbaikan dari lantai produksi'},d:{en:'Half-year kaizen convention reviewed proposals on safety, changeover time and material loss.',id:'Konvensi kaizen meninjau usulan keselamatan, waktu changeover, dan loss material.'}}
+];
