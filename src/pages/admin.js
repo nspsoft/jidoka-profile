@@ -185,7 +185,7 @@ export function aRes() {
 
 export function aResForm(i) {
   const R = dR();
-  const r = i >= 0 ? R[i] : { i: 'file', name: { en: '', id: '' }, d: { en: '', id: '' }, meta: '', size: '' };
+  const r = i >= 0 ? R[i] : { i: 'file', name: { en: '', id: '' }, d: { en: '', id: '' }, meta: '', size: '', url: '' };
   return '<form id="rform" class="form" style="margin-top:18px;border-top:2px solid var(--line);padding-top:18px">'
     + '<input type="hidden" name="i" value="' + i + '">'
     + fSel('ric', 'Ikon', ['building', 'file', 'award', 'factory'], r.i)
@@ -193,6 +193,14 @@ export function aResForm(i) {
     + fText('size', 'Ukuran (mis. 4.2 MB)', r.size)
     + fBi('name', 'Nama Dokumen', r.name)
     + fBiTa('d', 'Deskripsi', r.d)
+    + '<div class="f f-full" style="background:var(--bg);border:1px dashed var(--line);border-radius:10px;padding:14px">'
+    + '<b style="font:700 12px \'Barlow\';letter-spacing:.1em;color:var(--navy);display:block;margin-bottom:8px">UNGGAH FILE DOKUMEN KE SERVER (PDF / DOC / ZIP)</b>'
+    + '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">'
+    + '<input type="file" id="resuploadfile" accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.ppt,.pptx">'
+    + '<button type="button" class="btn btn-line btn-sm" id="btnuploadres">' + ic('download') + ' Unggah ke Server</button>'
+    + '<span id="uploadmsg" class="mini">Maksimal 25 MB</span>'
+    + '</div></div>'
+    + fText('url', 'URL Publik Dokumen (terisi otomatis setelah unggah)', r.url || '')
     + '<div class="f-full" style="display:flex;gap:10px"><button class="btn btn-red">Simpan Dokumen</button><button type="button" class="btn btn-line" id="rcancel">Batal</button></div></form>';
 }
 
@@ -204,7 +212,8 @@ export function saveRes(fd) {
     name: { en: fd.name_en || fd.name_id, id: fd.name_id || fd.name_en },
     d: { en: fd.d_en || fd.d_id, id: fd.d_id || fd.d_en },
     meta: fd.meta,
-    size: fd.size
+    size: fd.size,
+    url: fd.url || ''
   };
   if (i >= 0) R[i] = o;
   else R.push(o);
@@ -488,6 +497,47 @@ export function mountAdmin(seg, router, goHash) {
         router(true);
       };
       qs('#rcancel').onclick = () => { red.innerHTML = ''; };
+
+      // File upload handler
+      const upBtn = qs('#btnuploadres');
+      const fileIn = qs('#resuploadfile');
+      const upMsg = qs('#uploadmsg');
+      if (upBtn && fileIn) {
+        upBtn.onclick = async () => {
+          if (!fileIn.files || !fileIn.files[0]) {
+            toast('Pilih file terlebih dahulu');
+            return;
+          }
+          const file = fileIn.files[0];
+          const formData = new FormData();
+          formData.append('file', file);
+          if (upMsg) upMsg.textContent = 'Mengunggah file...';
+          try {
+            const res = await authFetch('/api/upload', {
+              method: 'POST',
+              body: formData
+            });
+            const data = await res.json();
+            if (res.ok && data.success && data.url) {
+              const urlIn = f.querySelector('input[name="url"]');
+              if (urlIn) urlIn.value = data.url;
+              const sizeIn = f.querySelector('input[name="size"]');
+              if (sizeIn && !sizeIn.value) {
+                const mb = (data.size_bytes / (1024 * 1024)).toFixed(1);
+                sizeIn.value = mb > 0.1 ? mb + ' MB' : Math.round(data.size_bytes / 1024) + ' KB';
+              }
+              if (upMsg) upMsg.textContent = '✓ Berhasil diunggah: ' + esc(data.orig_name);
+              toast('File berhasil diunggah');
+            } else {
+              if (upMsg) upMsg.textContent = 'Gagal: ' + (data.message || 'Error');
+              toast('Gagal mengunggah file');
+            }
+          } catch (err) {
+            if (upMsg) upMsg.textContent = 'Gagal: ' + err.message;
+            toast('Error jaringan saat upload');
+          }
+        };
+      }
     };
     const ar = qs('#addr');
     if (ar) ar.onclick = () => open(-1);
