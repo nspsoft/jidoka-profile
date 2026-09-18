@@ -1,5 +1,6 @@
 import './styles/main.css';
 import { qs, esc } from './components/dom.js';
+import { initData } from './data/db.js';
 import { initRouter, syncHdr } from './router.js';
 
 window.addEventListener('error', function (e) {
@@ -26,4 +27,6 @@ if (totop) {
   };
 }
 
+await initData();
 initRouter();
+

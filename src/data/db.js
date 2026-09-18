@@ -16,23 +16,11 @@ import { WHY } from './defaults/why.js';
 import { NAV } from './defaults/nav.js';
 
 import { store } from '../components/store.js';
+import { authFetch } from './auth.js';
 
 export const DBK = 'jri-db-v1';
 export const AUTHK = 'jri-auth';
 export { store };
-
-export function dbRead() {
-  try {
-    const r = store.get(DBK);
-    return r ? JSON.parse(r) : {};
-  } catch (e) {
-    return {};
-  }
-}
-
-export function dbWrite(d) {
-  store.set(DBK, JSON.stringify(d));
-}
 
 export const DEF = {
   products: PRODUCTS,
@@ -53,18 +41,119 @@ export const DEF = {
   nav: NAV
 };
 
+export function dbRead() {
+  try {
+    const r = store.get(DBK);
+    return r ? JSON.parse(r) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+export function dbWrite(d) {
+  store.set(DBK, JSON.stringify(d));
+}
+
+// In-memory cache for ultra-fast sync access by renderers
+const localStored = dbRead();
+let memCache = { ...DEF, ...localStored };
+let isRemote = false;
+
+export function getIsRemote() {
+  return isRemote;
+}
+
+// Initialize data layer: remote-first, localStorage/defaults fallback
+export async function initData() {
+  try {
+    const res = await fetch('/api/content/all');
+    if (res.ok) {
+      const json = await res.json();
+      if (json.success && json.data && Object.keys(json.data).length > 0) {
+        isRemote = true;
+        memCache = { ...DEF, ...json.data };
+        // Sync to local storage for offline fallback
+        dbWrite(memCache);
+        return { remote: true, count: Object.keys(json.data).length };
+      }
+    }
+  } catch (err) {
+    // API server offline, fallback to local storage
+  }
+
+  isRemote = false;
+  memCache = { ...DEF, ...dbRead() };
+  return { remote: false };
+}
+
 export const DB = {
   get(k) {
-    const d = dbRead();
-    return d[k] !== undefined ? d[k] : DEF[k];
+    return memCache[k] !== undefined ? memCache[k] : DEF[k];
   },
+
   set(k, v) {
+    memCache[k] = v;
     const d = dbRead();
     d[k] = v;
     dbWrite(d);
+
+    // Sync to remote server asynchronously if in remote mode
+    if (isRemote) {
+      authFetch(`/api/content/${encodeURIComponent(k)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(v)
+      }).catch(err => {
+        console.warn(`[Data Sync] Background sync failed for ${k}:`, err.message);
+      });
+    }
   },
+
+  async save(k, v) {
+    memCache[k] = v;
+    const d = dbRead();
+    d[k] = v;
+    dbWrite(d);
+
+    if (isRemote) {
+      const res = await authFetch(`/api/content/${encodeURIComponent(k)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(v)
+      });
+      return res.json();
+    }
+    return { success: true, local: true };
+  },
+
   resetAll() {
+    memCache = { ...DEF };
     dbWrite({});
+
+    if (isRemote) {
+      authFetch('/api/content/all', { method: 'DELETE' }).catch(err => {
+        console.warn('[Data Sync] Remote reset failed:', err.message);
+      });
+    }
+  },
+
+  async importBackup(d) {
+    if (typeof d !== 'object' || !d || Array.isArray(d)) {
+      throw new Error('Data backup bukan objek');
+    }
+
+    memCache = { ...memCache, ...d };
+    dbWrite(memCache);
+
+    if (isRemote) {
+      const res = await authFetch('/api/content/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(d)
+      });
+      return res.json();
+    }
+    return { success: true, local: true };
   }
 };
 
