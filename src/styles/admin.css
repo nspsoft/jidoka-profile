@@ -1,4 +1,4 @@
-﻿/* ===== ADMIN CMS ===== */
+/* ===== ADMIN CMS ===== */
 .adm{display:grid;grid-template-columns:230px 1fr;gap:24px;align-items:start;margin-top:30px}
 .adm-nav{background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px;position:sticky;top:96px}
 .adm-nav button{display:flex;width:100%;gap:10px;align-items:center;padding:11px 14px;border-radius:9px;font:600 13.5px 'Barlow';color:var(--mut);transition:.2s}
@@ -21,3 +21,25 @@
 @media(max-width:620px){
  .stat-mini{grid-template-columns:1fr}
 }
+
+/* Inbox & Leads Styles */
+.inbox-item{border:1px solid var(--line);border-radius:12px;margin-bottom:12px;overflow:hidden;background:#fff;transition:.15s border}
+.inbox-item:hover{border-color:#b9c6d8}
+.inbox-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;cursor:pointer;gap:12px;flex-wrap:wrap;background:#fbfcfe}
+.inbox-head-l{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.inbox-head-r{display:flex;align-items:center;gap:12px}
+.inbox-body{padding:18px;border-top:1px solid var(--line);display:none;background:#fff}
+.inbox-item.open .inbox-body{display:block}
+.tag-type{display:inline-block;padding:3px 8px;border-radius:6px;font:700 11px 'Barlow';letter-spacing:.05em;text-transform:uppercase}
+.tag-rfq{background:#fde8e8;color:#b0141a}
+.tag-product{background:#e8f0fe;color:#16336e}
+.tag-corporate{background:#fef5e7;color:#936f2e}
+.tag-status{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;font:600 12px 'Barlow'}
+.tag-status.new{background:#fee2e2;color:#991b1b}
+.tag-status.new::before{content:'';width:7px;height:7px;border-radius:50%;background:#dc2626}
+.tag-status.handled{background:#dcfce7;color:#166534}
+.tag-status.handled::before{content:'';width:7px;height:7px;border-radius:50%;background:#16a34a}
+.lead-tbl{width:100%;border-collapse:collapse;margin-top:10px;font-size:13.5px}
+.lead-tbl td{padding:8px 12px;border:1px solid var(--line)}
+.lead-tbl td:first-child{background:#f8fafc;width:30%;font-weight:600;color:var(--navy)}
+

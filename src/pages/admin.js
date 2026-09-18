@@ -8,16 +8,72 @@ import { L } from '../i18n.js';
 
 export { isLogged, doLogin, doLogout };
 
+let cachedLeads = [];
+
+export async function fetchLeads() {
+  try {
+    const res = await authFetch('/api/leads');
+    if (res.ok) {
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        cachedLeads = json.data;
+        return cachedLeads;
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to fetch leads:', e.message);
+  }
+  return cachedLeads;
+}
+
 export function aDash() {
   const st = dbRead();
   const ov = Object.keys(st).filter(k => k !== 'settings').length;
   const cnt = k => (st[k] !== undefined ? st[k] : DEF[k]).length;
+  const newLeads = cachedLeads.filter(l => l.status === 'new').length;
   return '<h3>Dashboard</h3><div class="stat-mini" style="margin-top:16px">'
     + '<div><b>' + cnt('products') + '</b><span class="mini" style="display:block;margin-top:4px">Produk</span></div>'
     + '<div><b>' + cnt('news') + '</b><span class="mini" style="display:block;margin-top:4px">Berita</span></div>'
     + '<div><b>' + cnt('resources') + '</b><span class="mini" style="display:block;margin-top:4px">Resources</span></div>'
-    + '<div><b>' + (ov ? 'Custom' : 'Default') + '</b><span class="mini" style="display:block;margin-top:4px">Status data</span></div></div>'
-    + '<p class="tiny" style="margin-top:18px">Pilih menu di sebelah kiri untuk mengelola konten. Semua perubahan langsung tampil di website (EN & ID).<br>Cakupan sesuai PRD §11.4: daftar produk, berita/aktivitas, dokumen resources, dan data kapabilitas — tanpa perubahan kode oleh developer.</p>';
+    + '<div><b>' + cachedLeads.length + (newLeads ? ' <small style="color:var(--red);font-size:14px">(' + newLeads + ' baru)</small>' : '') + '</b><span class="mini" style="display:block;margin-top:4px">Inbox Leads</span></div></div>'
+    + '<p class="tiny" style="margin-top:18px">Pilih menu di sebelah kiri untuk mengelola konten dan pesan masuk. Data tersimpan di database server (PRD §5, §6 M2).</p>';
+}
+
+export function aInbox() {
+  if (!cachedLeads.length) {
+    return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h3>Inbox Leads (0)</h3><button class="btn btn-line btn-sm" id="refinbox">↻ Refresh</button></div>'
+      + '<p class="tiny">Daftar pesan & RFQ masuk dari formulir kontak website (PRD §5, §6 M2).</p>'
+      + '<p class="empty" style="padding:40px 0;text-align:center">Belum ada pesan atau RFQ masuk.</p>';
+  }
+
+  const unhandled = cachedLeads.filter(l => l.status === 'new').length;
+  return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h3>Inbox Leads (' + cachedLeads.length + (unhandled ? ' · <span style="color:var(--red)">' + unhandled + ' Baru</span>' : '') + ')</h3><button class="btn btn-line btn-sm" id="refinbox">↻ Refresh</button></div>'
+    + '<p class="tiny">Klik salah satu baris untuk melihat detail spesifikasi RFQ / pesan pelanggan.</p>'
+    + cachedLeads.map(l => {
+      const p = l.payload || {};
+      const sender = p.Company || p.Organization || p.Name || p['Perusahaan'] || p['Nama'] || 'Tanpa Nama';
+      const contact = p.Email || p.Phone || p['Telepon'] || '';
+      const dateStr = l.created_at ? new Date(l.created_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : '-';
+      const rows = Object.entries(p).filter(([k]) => !k.startsWith('_')).map(([k, v]) => '<tr><td>' + esc(k) + '</td><td>' + esc(v) + '</td></tr>').join('');
+      return '<div class="inbox-item" id="lead-' + l.id + '">'
+        + '<div class="inbox-head" data-lead-toggle="' + l.id + '">'
+        + '<div class="inbox-head-l">'
+        + '<span class="tag-type tag-' + esc(l.type) + '">' + esc(l.type) + '</span>'
+        + '<b>' + esc(sender) + '</b>'
+        + (contact ? '<span class="mini">(' + esc(contact) + ')</span>' : '')
+        + '</div>'
+        + '<div class="inbox-head-r">'
+        + '<span class="mini">' + esc(dateStr) + '</span>'
+        + '<span class="tag-status ' + (l.status === 'new' ? 'new' : 'handled') + '">' + (l.status === 'new' ? 'Baru' : 'Handled') + '</span>'
+        + '</div></div>'
+        + '<div class="inbox-body">'
+        + (p.refId ? '<div style="margin-bottom:10px"><b style="font-size:12px;letter-spacing:.05em;color:var(--mut)">REF: ' + esc(p.refId) + '</b></div>' : '')
+        + '<table class="lead-tbl">' + rows + '</table>'
+        + '<div style="margin-top:14px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">'
+        + (l.status === 'new' ? '<button class="btn btn-red btn-sm" data-lead-handle="' + l.id + '">✓ Tandai Handled</button>' : '<button class="btn btn-line btn-sm" data-lead-unhandle="' + l.id + '">↺ Tandai Baru</button>')
+        + '<button class="btn btn-sm" style="color:var(--red);border:1.5px solid var(--red);border-radius:9px;padding:6px 12px" data-lead-del="' + l.id + '">' + ic('trash') + ' Hapus</button>'
+        + '</div></div></div>';
+    }).join('');
 }
 
 export function aProducts() {
@@ -193,8 +249,10 @@ export function renderAdmin(tab) {
       + '<button class="btn btn-red" style="width:100%">Masuk</button></form></div></div></section>';
   }
   tab = tab || 'dash';
+  const unhandled = cachedLeads.filter(l => l.status === 'new').length;
   const tabs = [
     ['dash', 'Dashboard'],
+    ['inbox', 'Inbox' + (unhandled ? ' (' + unhandled + ')' : '')],
     ['products', 'Produk'],
     ['news', 'Berita & Aktivitas'],
     ['caps', 'Kapabilitas'],
@@ -204,7 +262,7 @@ export function renderAdmin(tab) {
   ];
   let body = '';
   try {
-    body = tab === 'products' ? aProducts() : tab === 'news' ? aNews() : tab === 'caps' ? aCaps() : tab === 'resources' ? aRes() : tab === 'company' ? aCompany() : tab === 'backup' ? aBackup() : aDash();
+    body = tab === 'inbox' ? aInbox() : tab === 'products' ? aProducts() : tab === 'news' ? aNews() : tab === 'caps' ? aCaps() : tab === 'resources' ? aRes() : tab === 'company' ? aCompany() : tab === 'backup' ? aBackup() : aDash();
   } catch (e) {
     body = '<p style="color:var(--red)">Error: ' + esc(e.message) + '</p>';
   }
@@ -225,6 +283,7 @@ export function mountAdmin(seg, router, goHash) {
         const res = await doLogin(email, pw);
         if (res.ok) {
           toast('Selamat datang');
+          await fetchLeads();
           router(true);
         } else {
           const fe = qs('#lerr');
@@ -239,6 +298,15 @@ export function mountAdmin(seg, router, goHash) {
     return;
   }
 
+  // Preload leads in background for badge count if not loaded yet
+  if (!cachedLeads.length) {
+    fetchLeads().then(() => {
+      const unh = cachedLeads.filter(l => l.status === 'new').length;
+      const ibBtn = qs('.adm-nav [data-at="inbox"]');
+      if (ibBtn && unh) ibBtn.textContent = 'Inbox (' + unh + ')';
+    });
+  }
+
   qa('.adm-nav [data-at]').forEach(b => b.onclick = () => goHash('#/admin/' + b.dataset.at));
 
   const out = qs('#admout');
@@ -251,6 +319,85 @@ export function mountAdmin(seg, router, goHash) {
   }
 
   const T = seg[1] || 'dash';
+
+  if (T === 'inbox') {
+    // Refresh inbox button
+    const refb = qs('#refinbox');
+    if (refb) {
+      refb.onclick = async () => {
+        await fetchLeads();
+        toast('Inbox diperbarui');
+        router(true);
+      };
+    }
+
+    // Toggle lead accordion
+    qa('[data-lead-toggle]').forEach(el => {
+      el.onclick = () => {
+        const item = el.closest('.inbox-item');
+        if (item) item.classList.toggle('open');
+      };
+    });
+
+    // Mark handled
+    qa('[data-lead-handle]').forEach(btn => {
+      btn.onclick = async () => {
+        const id = btn.dataset.leadHandle;
+        try {
+          const res = await authFetch('/api/leads/' + id, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'handled' })
+          });
+          if (res.ok) {
+            toast('Lead ditandai selesai');
+            await fetchLeads();
+            router(true);
+          }
+        } catch (e) {
+          toast('Gagal memperbarui status');
+        }
+      };
+    });
+
+    // Mark unhandled
+    qa('[data-lead-unhandle]').forEach(btn => {
+      btn.onclick = async () => {
+        const id = btn.dataset.leadUnhandle;
+        try {
+          const res = await authFetch('/api/leads/' + id, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'new' })
+          });
+          if (res.ok) {
+            toast('Lead ditandai baru');
+            await fetchLeads();
+            router(true);
+          }
+        } catch (e) {
+          toast('Gagal memperbarui status');
+        }
+      };
+    });
+
+    // Delete lead
+    qa('[data-lead-del]').forEach(btn => {
+      btn.onclick = async () => {
+        const id = btn.dataset.leadDel;
+        if (confirm('Hapus pesan lead ini?')) {
+          try {
+            await authFetch('/api/leads/' + id, { method: 'DELETE' });
+            toast('Lead dihapus');
+            await fetchLeads();
+            router(true);
+          } catch (e) {
+            toast('Gagal menghapus lead');
+          }
+        }
+      };
+    });
+  }
 
   if (T === 'products') {
     const ped = qs('#ped');
