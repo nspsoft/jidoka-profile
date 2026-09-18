@@ -1,4 +1,4 @@
-﻿import { PRODUCTS } from './defaults/products.js';
+import { PRODUCTS } from './defaults/products.js';
 import { NEWS } from './defaults/news.js';
 import { CAPS } from './defaults/caps.js';
 import { RES } from './defaults/resources.js';
@@ -15,23 +15,11 @@ import { PILLARS } from './defaults/pillars.js';
 import { WHY } from './defaults/why.js';
 import { NAV } from './defaults/nav.js';
 
+import { store } from '../components/store.js';
+
 export const DBK = 'jri-db-v1';
 export const AUTHK = 'jri-auth';
-
-export const store = {
-  get(k) {
-    try {
-      return typeof window !== 'undefined' && window.localStorage ? localStorage.getItem(k) : null;
-    } catch (e) {
-      return null;
-    }
-  },
-  set(k, v) {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) localStorage.setItem(k, v);
-    } catch (e) {}
-  }
-};
+export { store };
 
 export function dbRead() {
   try {
