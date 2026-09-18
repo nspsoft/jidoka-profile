@@ -1,37 +1,12 @@
-import { DB, dbRead, dbWrite, DEF, dP, dN, dC, dR, dCo, AUTHK } from '../data/db.js';
+import { DB, dbRead, dbWrite, DEF, dP, dN, dC, dR, dCo } from '../data/db.js';
+import { isLogged, doLogin, doLogout, authFetch } from '../data/auth.js';
 import { esc, qs, qa, lines, parsePairs, slug } from '../components/dom.js';
 import { ic } from '../components/icons.js';
 import { toast } from '../components/toast.js';
 import { fText, fTa, fBi, fBiTa, fSel } from '../components/forms.js';
 import { L } from '../i18n.js';
 
-let adminMem = false;
-
-export function isLogged() {
-  try {
-    if (typeof window !== 'undefined' && window.sessionStorage && sessionStorage.getItem(AUTHK) === '1') return true;
-  } catch (e) {}
-  return adminMem;
-}
-
-export function doLogin(pw) {
-  const d = dbRead(), s = d.settings || {};
-  if (pw === (s.password || 'jidoka2026')) {
-    adminMem = true;
-    try {
-      if (typeof window !== 'undefined' && window.sessionStorage) sessionStorage.setItem(AUTHK, '1');
-    } catch (e) {}
-    return true;
-  }
-  return false;
-}
-
-export function doLogout() {
-  adminMem = false;
-  try {
-    if (typeof window !== 'undefined' && window.sessionStorage) sessionStorage.removeItem(AUTHK);
-  } catch (e) {}
-}
+export { isLogged, doLogin, doLogout };
 
 export function aDash() {
   const st = dbRead();
@@ -211,8 +186,10 @@ export function renderAdmin(tab) {
   if (!isLogged()) {
     return '<section class="sec" style="padding-top:48px"><div class="wrap" style="max-width:430px"><div class="panel-card">'
       + '<h3 style="font-family:\'Barlow Condensed\';font-size:26px;text-transform:uppercase;color:var(--navy)">Login Admin CMS</h3>'
-      + '<p class="tiny" style="margin:6px 0 16px">Kelola produk, berita, kapabilitas, resources & data perusahaan tanpa sentuh kode (PRD §8, §11.4).<br>Demo build — password default: <b>jidoka2026</b></p>'
-      + '<form id="lform" class="form" style="grid-template-columns:1fr"><div class="f"><label>Password</label><input name="pw" type="password" required><div class="err" id="lerr">Password salah</div></div>'
+      + '<p class="tiny" style="margin:6px 0 16px">Autentikasi akun admin server (PRD §5, §6 M2).<br>Default: <b>admin@jidoka.co.id</b> / <b>jidoka2026</b></p>'
+      + '<form id="lform" class="form" style="grid-template-columns:1fr">'
+      + '<div class="f"><label>Email</label><input name="email" type="email" value="admin@jidoka.co.id" required></div>'
+      + '<div class="f"><label>Password</label><input name="pw" type="password" required><div class="err" id="lerr">Email atau password salah</div></div>'
       + '<button class="btn btn-red" style="width:100%">Masuk</button></form></div></div></section>';
   }
   tab = tab || 'dash';
@@ -231,7 +208,7 @@ export function renderAdmin(tab) {
   } catch (e) {
     body = '<p style="color:var(--red)">Error: ' + esc(e.message) + '</p>';
   }
-  return '<section class="page-hero"><div class="wrap"><h1>Admin CMS</h1><p class="lead">Perubahan langsung tampil di website — tanpa menyentuh kode. Data tersimpan di browser ini (localStorage); gunakan tab Backup untuk memindahkan ke perangkat lain.</p></div></section>'
+  return '<section class="page-hero"><div class="wrap"><h1>Admin CMS</h1><p class="lead">Perubahan langsung tampil di website — tanpa menyentuh kode. Data tersimpan di database server.</p></div></section>'
     + '<section class="sec" style="padding-top:10px"><div class="wrap adm">'
     + '<div class="adm-nav">' + tabs.map(t => '<button class="' + (tab === t[0] ? 'on' : '') + '" data-at="' + t[0] + '">' + t[1] + '</button>').join('') + '<button id="admout" style="color:var(--red)">⎋ Keluar</button></div>'
     + '<div class="adm-card">' + body + '</div></div></section>';
@@ -241,14 +218,18 @@ export function mountAdmin(seg, router, goHash) {
   if (!isLogged()) {
     const lf = qs('#lform');
     if (lf) {
-      lf.onsubmit = e => {
+      lf.onsubmit = async e => {
         e.preventDefault();
-        if (doLogin(lf.pw.value)) {
+        const email = (lf.email && lf.email.value) || '';
+        const pw = (lf.pw && lf.pw.value) || '';
+        const res = await doLogin(email, pw);
+        if (res.ok) {
           toast('Selamat datang');
           router(true);
         } else {
           const fe = qs('#lerr');
           if (fe) {
+            fe.textContent = res.message || 'Email atau password salah';
             fe.parentElement.classList.add('bad');
             fe.style.display = 'block';
           }
