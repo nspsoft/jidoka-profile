@@ -4,12 +4,16 @@ import { dCo } from '../data/db.js';
 import { L } from '../i18n.js';
 
 export function renderFooter() {
-  const co = dCo();
+  const co = dCo() || {};
+  const t1 = co.logoText1 || 'JIDOKA RESULT';
+  const t2 = co.logoText2 || 'INDONESIA';
+  const motto = co.motto || 'PACKAGE YOUR QUALITY.';
+  const tagline = co.tagline || 'Our website is not our company profile. It is our Digital Salesman, Corporate Window, and 24/7 Business Development Platform.';
   return '<div class="wrap ft-grid">'
-    + '<div class="ft-brand"><a class="logo" href="#/home">' + logo() + '<span class="logo-t"><b>JIDOKA RESULT</b><i>INDONESIA</i></span></a><div class="motto-g">“PACKAGE YOUR QUALITY.”</div>'
+    + '<div class="ft-brand"><a class="logo" href="#/home">' + logo(co.logoUrl, co.name || 'JRI') + '<span class="logo-t"><b>' + esc(t1) + '</b><i>' + esc(t2) + '</i></span></a><div class="motto-g">“' + esc(motto) + '”</div>'
     + '<div class="addr">' + ic('pin') + '<span>' + esc(co.addr) + ' <small>[address to be confirmed]</small></span></div>'
     + '<div class="addr">' + ic('clock') + '<span>' + esc(co.hours) + '</span></div>'
-    + '<p class="tagline">“Our website is not our company profile. It is our Digital Salesman, Corporate Window, and 24/7 Business Development Platform.”</p></div>'
+    + '<p class="tagline">“' + esc(tagline) + '”</p></div>'
     + '<div><h5>' + L({ en: 'Company', id: 'Perusahaan' }) + '</h5><ul><li><a href="#/corporate">' + L({ en: 'Corporate', id: 'Korporat' }) + '</a></li><li><a href="#/way">' + L({ en: 'Our Way', id: 'Our Way' }) + '</a></li><li><a href="#/manufacturing">' + L({ en: 'Manufacturing', id: 'Manufaktur' }) + '</a></li><li><a href="#/quality">' + L({ en: 'Quality', id: 'Kualitas' }) + '</a></li></ul></div>'
     + '<div><h5>' + L({ en: 'Business', id: 'Bisnis' }) + '</h5><ul><li><a href="#/products">' + L({ en: 'Products', id: 'Produk' }) + '</a></li><li><a href="#/application">' + L({ en: 'Application', id: 'Aplikasi' }) + '</a></li><li><a href="#/partnership">' + L({ en: 'Partnership', id: 'Kemitraan' }) + '</a></li><li><a href="#/resources">' + L({ en: 'Resources', id: 'Sumber Daya' }) + '</a></li><li><a href="#/contact">' + L({ en: 'Contact', id: 'Kontak' }) + '</a></li></ul></div>'
     + '<div><h5>' + L({ en: 'Contact', id: 'Kontak' }) + '</h5><ul class="ft-c">'

@@ -43,3 +43,15 @@
 .lead-tbl td{padding:8px 12px;border:1px solid var(--line)}
 .lead-tbl td:first-child{background:#f8fafc;width:30%;font-weight:600;color:var(--navy)}
 
+/* Logo Preview Styles */
+.logo-preview-box{display:flex;gap:16px;margin:16px 0 20px;flex-wrap:wrap}
+.logo-preview-card{flex:1;min-width:240px;border:1px solid var(--line);border-radius:12px;padding:18px}
+.logo-preview-card.light{background:#ffffff}
+.logo-preview-card.dark{background:#0e2350;color:#ffffff}
+.logo-preview-card .lp-label{font:700 11px 'Barlow';letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;opacity:.7}
+.logo-preview-display{display:flex;align-items:center;gap:12px}
+.logo-preview-display .logo svg{width:44px;height:44px}
+.logo-preview-card.dark .logo-t b{color:#fff}
+.logo-preview-card.dark .logo-t i{color:#ff9296}
+
+

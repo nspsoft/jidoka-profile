@@ -1,7 +1,7 @@
 import { DB, dbRead, dbWrite, DEF, dP, dN, dC, dR, dCo } from '../data/db.js';
 import { isLogged, doLogin, doLogout, authFetch } from '../data/auth.js';
 import { esc, qs, qa, lines, parsePairs, slug } from '../components/dom.js';
-import { ic } from '../components/icons.js';
+import { logo, ic } from '../components/icons.js';
 import { toast } from '../components/toast.js';
 import { fText, fTa, fBi, fBiTa, fSel } from '../components/forms.js';
 import { L } from '../i18n.js';
@@ -220,9 +220,70 @@ export function saveRes(fd) {
   DB.set('resources', R);
 }
 
+export function aProfile() {
+  const co = dCo() || {};
+  const t1 = co.logoText1 || 'JIDOKA RESULT';
+  const t2 = co.logoText2 || 'INDONESIA';
+  const logoUrl = co.logoUrl || '';
+  const desc = co.desc || {
+    en: 'PT Jidoka Result Indonesia is an industrial packaging manufacturer built on Japanese manufacturing discipline — producing carton box, imprabox, partition, and custom packaging for automotive, steel, and industrial sectors.',
+    id: 'PT Jidoka Result Indonesia adalah produsen packaging industri yang dibangun di atas disiplin manufaktur Jepang — memproduksi karton box, imprabox, partisi, dan custom packaging untuk sektor otomotif, baja, dan industri.'
+  };
+
+  const previewDisplay = (bgClass) => {
+    return '<div class="logo-preview-card ' + bgClass + '">'
+      + '<div class="lp-label">' + (bgClass === 'light' ? 'Tampilan Header (Light)' : 'Tampilan Footer (Dark)') + '</div>'
+      + '<div class="logo-preview-display">'
+      + '<div class="logo">' + logo(logoUrl, co.name || 'JRI') + '<span class="logo-t"><b>' + esc(t1) + '</b><i>' + esc(t2) + '</i></span></div>'
+      + '</div></div>';
+  };
+
+  return '<h3>Profil & Logo Perusahaan</h3>'
+    + '<p class="tiny">Kelola logo visual perusahaan, teks brand header/footer, slogan, tagline, dan profil resmi bisnis (PRD §5, §6 M2).</p>'
+    + '<div class="logo-preview-box" id="logopreviewbox">'
+    + previewDisplay('light')
+    + previewDisplay('dark')
+    + '</div>'
+    + '<form id="profform" class="form" style="margin-top:14px">'
+    + '<div class="f f-full" style="background:var(--bg);border:1px dashed var(--line);border-radius:10px;padding:16px">'
+    + '<b style="font:700 12px \'Barlow\';letter-spacing:.1em;color:var(--navy);display:block;margin-bottom:8px">UNGGAH FILE LOGO KE SERVER (PNG / SVG / WEBP / JPG)</b>'
+    + '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">'
+    + '<input type="file" id="logouploadfile" accept="image/png,image/svg+xml,image/webp,image/jpeg,image/gif">'
+    + '<button type="button" class="btn btn-line btn-sm" id="btnuploadlogo">' + ic('download') + ' Unggah File Logo</button>'
+    + '<button type="button" class="btn btn-sm" style="color:var(--mut);border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 12px" id="btnresetlogo">Gunakan Logo SVG Bawaan</button>'
+    + '<span id="logouploadmsg" class="mini">Maksimal 5 MB • Format transparan (PNG/SVG) disarankan</span>'
+    + '</div></div>'
+    + fText('logoUrl', 'URL / Path Gambar Logo (kosongkan untuk SVG default)', logoUrl)
+    + fText('name', 'Nama Resmi Perusahaan', co.name || 'PT Jidoka Result Indonesia', 1)
+    + fText('logoText1', 'Teks Logo Baris 1 (Header/Footer)', t1, 1)
+    + fText('logoText2', 'Teks Logo Baris 2 (Header/Footer)', t2, 1)
+    + fText('motto', 'Motto Perusahaan (mis. PACKAGE YOUR QUALITY.)', co.motto || 'PACKAGE YOUR QUALITY.', 1)
+    + fText('tagline', 'Tagline Bisnis (Footer)', co.tagline || 'Our website is not our company profile. It is our Digital Salesman, Corporate Window, and 24/7 Business Development Platform.', 1)
+    + fBiTa('desc', 'Deskripsi Ringkas Perusahaan (Bilingual)', desc)
+    + '<div class="f-full"><button class="btn btn-red">Simpan Profil & Logo</button></div></form>';
+}
+
+export function saveProfile(fd) {
+  const co = dCo() || {};
+  const updated = {
+    ...co,
+    name: (fd.name || '').trim() || 'PT Jidoka Result Indonesia',
+    logoUrl: (fd.logoUrl || '').trim(),
+    logoText1: (fd.logoText1 || '').trim() || 'JIDOKA RESULT',
+    logoText2: (fd.logoText2 || '').trim() || 'INDONESIA',
+    motto: (fd.motto || '').trim() || 'PACKAGE YOUR QUALITY.',
+    tagline: (fd.tagline || '').trim(),
+    desc: {
+      en: (fd.desc_en || '').trim(),
+      id: (fd.desc_id || '').trim()
+    }
+  };
+  DB.set('company', updated);
+}
+
 export function aCompany() {
   const co = dCo();
-  return '<h3>Perusahaan & Akses</h3><p class="tiny">Dipakai di footer, halaman Contact, Corporate, dan video background hero beranda. Ganti password admin di bagian bawah.</p>'
+  return '<h3>Kontak & Akses</h3><p class="tiny">Kelola kontak kantor/pabrik, email sales/investor, jam kerja, video hero beranda, dan password login admin.</p>'
     + '<form id="coform" class="form" style="margin-top:14px">'
     + fText('phone', 'Telepon / WhatsApp', co.phone, 1)
     + fText('hours', 'Jam Operasional', co.hours, 1)
@@ -262,16 +323,17 @@ export function renderAdmin(tab) {
   const tabs = [
     ['dash', 'Dashboard'],
     ['inbox', 'Inbox' + (unhandled ? ' (' + unhandled + ')' : '')],
+    ['profile', 'Profil & Logo'],
     ['products', 'Produk'],
     ['news', 'Berita & Aktivitas'],
     ['caps', 'Kapabilitas'],
     ['resources', 'Resources'],
-    ['company', 'Perusahaan & Akses'],
+    ['company', 'Kontak & Akses'],
     ['backup', 'Backup / Restore']
   ];
   let body = '';
   try {
-    body = tab === 'inbox' ? aInbox() : tab === 'products' ? aProducts() : tab === 'news' ? aNews() : tab === 'caps' ? aCaps() : tab === 'resources' ? aRes() : tab === 'company' ? aCompany() : tab === 'backup' ? aBackup() : aDash();
+    body = tab === 'inbox' ? aInbox() : tab === 'profile' ? aProfile() : tab === 'products' ? aProducts() : tab === 'news' ? aNews() : tab === 'caps' ? aCaps() : tab === 'resources' ? aRes() : tab === 'company' ? aCompany() : tab === 'backup' ? aBackup() : aDash();
   } catch (e) {
     body = '<p style="color:var(--red)">Error: ' + esc(e.message) + '</p>';
   }
@@ -553,6 +615,89 @@ export function mountAdmin(seg, router, goHash) {
     });
   }
 
+  if (T === 'profile') {
+    const f = qs('#profform');
+    if (f) {
+      const updatePreview = () => {
+        const previewBox = qs('#logopreviewbox');
+        if (!previewBox) return;
+        const urlIn = f.querySelector('input[name="logoUrl"]');
+        const t1In = f.querySelector('input[name="logoText1"]');
+        const t2In = f.querySelector('input[name="logoText2"]');
+        const nameIn = f.querySelector('input[name="name"]');
+        const u = urlIn ? urlIn.value.trim() : '';
+        const t1 = (t1In && t1In.value.trim()) || 'JIDOKA RESULT';
+        const t2 = (t2In && t2In.value.trim()) || 'INDONESIA';
+        const n = (nameIn && nameIn.value.trim()) || 'JRI';
+        previewBox.querySelectorAll('.logo-preview-display').forEach(d => {
+          d.innerHTML = '<div class="logo">' + logo(u, n) + '<span class="logo-t"><b>' + esc(t1) + '</b><i>' + esc(t2) + '</i></span></div>';
+        });
+      };
+
+      f.onsubmit = e => {
+        e.preventDefault();
+        const fd = {};
+        qa('input,textarea', f).forEach(el => fd[el.name] = el.value);
+        saveProfile(fd);
+        toast('Profil & Logo berhasil disimpan');
+        router(true);
+      };
+
+      const upBtn = qs('#btnuploadlogo');
+      const fileIn = qs('#logouploadfile');
+      const upMsg = qs('#logouploadmsg');
+      const resetBtn = qs('#btnresetlogo');
+
+      if (upBtn && fileIn) {
+        upBtn.onclick = async () => {
+          if (!fileIn.files || !fileIn.files[0]) {
+            toast('Pilih file gambar logo terlebih dahulu');
+            return;
+          }
+          const file = fileIn.files[0];
+          const formData = new FormData();
+          formData.append('file', file);
+          if (upMsg) upMsg.textContent = 'Mengunggah logo...';
+          try {
+            const res = await authFetch('/api/upload', {
+              method: 'POST',
+              body: formData
+            });
+            const data = await res.json();
+            if (res.ok && data.success && data.url) {
+              const urlIn = f.querySelector('input[name="logoUrl"]');
+              if (urlIn) urlIn.value = data.url;
+              if (upMsg) upMsg.textContent = '✓ Logo berhasil diunggah: ' + esc(data.orig_name);
+              updatePreview();
+              toast('Logo berhasil diunggah');
+            } else {
+              if (upMsg) upMsg.textContent = 'Gagal: ' + (data.message || 'Error');
+              toast('Gagal mengunggah logo');
+            }
+          } catch (err) {
+            if (upMsg) upMsg.textContent = 'Gagal: ' + err.message;
+            toast('Error jaringan saat upload');
+          }
+        };
+      }
+
+      if (resetBtn) {
+        resetBtn.onclick = () => {
+          const urlIn = f.querySelector('input[name="logoUrl"]');
+          if (urlIn) urlIn.value = '';
+          if (upMsg) upMsg.textContent = 'Logo direset ke SVG emblem bawaan.';
+          updatePreview();
+          toast('Kembali ke logo SVG emblem bawaan');
+        };
+      }
+
+      ['logoUrl', 'logoText1', 'logoText2', 'name'].forEach(fld => {
+        const inp = f.querySelector('input[name="' + fld + '"]');
+        if (inp) inp.oninput = updatePreview;
+      });
+    }
+  }
+
   if (T === 'company') {
     const f = qs('#coform');
     if (f) {
@@ -560,7 +705,9 @@ export function mountAdmin(seg, router, goHash) {
         e.preventDefault();
         const fd = {};
         qa('input,textarea', f).forEach(el => fd[el.name] = el.value);
+        const curCo = dCo() || {};
         DB.set('company', {
+          ...curCo,
           phone: fd.phone,
           sales: fd.sales,
           corp: fd.corp,
