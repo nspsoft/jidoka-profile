@@ -1,5 +1,5 @@
-﻿/* ===== HERO VIDEO FULL ===== */
-.hero-v{position:relative;min-height:100svh;display:flex;flex-direction:column;justify-content:space-between;padding:150px 24px 46px;background:#0a1626;overflow:hidden}
+/* ===== HERO VIDEO FULL ===== */
+.hero-v{position:relative;min-height:calc(100svh - 74px);display:flex;flex-direction:column;justify-content:space-between;padding:34px 24px 36px;background:#0a1626;overflow:hidden}
 .hv-media{position:absolute;inset:0}
 .hv-fallback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:.4;transition:opacity 1s}
 .hv-fallback svg{width:min(980px,92%);height:auto}
@@ -7,13 +7,13 @@
 .hv-media.playing video{opacity:.55}
 .hv-media.playing .hv-fallback{opacity:0}
 .hv-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,16,32,.74),rgba(8,16,32,.32) 45%,rgba(8,16,32,.9))}
-.hv-in{position:relative;z-index:2;max-width:1180px;margin:0 auto;width:100%;flex:1;display:flex;flex-direction:column;justify-content:space-between;gap:44px}
+.hv-in{position:relative;z-index:2;max-width:1180px;margin:0 auto;width:100%;flex:1;display:flex;flex-direction:column;justify-content:space-between;gap:24px}
 .hv-kick{font:600 13px 'Barlow';letter-spacing:.38em;text-transform:uppercase;color:#eef2f8}
-.hv-h1{font-family:'Barlow Condensed';font-weight:700;font-size:clamp(64px,12.5vw,190px);line-height:.88;text-transform:uppercase;color:#fff;margin-top:24px;letter-spacing:-.005em}
+.hv-h1{font-family:'Barlow Condensed';font-weight:700;font-size:clamp(54px,min(11vw,17.5vh),155px);line-height:.88;text-transform:uppercase;color:#fff;margin-top:16px;letter-spacing:-.005em}
 .hv-h1 .red{color:var(--red)}
-.hv-bot{display:flex;justify-content:space-between;align-items:flex-end;gap:30px;flex-wrap:wrap}
-.hv-bot p{max-width:520px;color:#e3e9f2;font-size:18px;line-height:1.65}
-.hv-btns{display:flex;gap:14px;flex-wrap:wrap}
+.hv-bot{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap}
+.hv-bot p{max-width:520px;color:#e3e9f2;font-size:16.5px;line-height:1.6}
+.hv-btns{display:flex;gap:12px;flex-wrap:wrap}
 .hv-scroll{position:absolute;right:26px;bottom:26px;z-index:2;color:#cfd8e6;font:700 10px 'Barlow';letter-spacing:.32em;writing-mode:vertical-rl;text-transform:uppercase}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
 .fl1{animation:float 7s ease-in-out infinite}.fl2{animation:float 9s ease-in-out infinite reverse}
@@ -21,9 +21,15 @@
 @keyframes dash{to{stroke-dashoffset:-400}}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(40,200,64,.5)}70%{box-shadow:0 0 0 7px rgba(40,200,64,0)}100%{box-shadow:0 0 0 0 rgba(40,200,64,0)}}
 
-@media(max-width:640px){
- .hero-v{padding:120px 20px 96px}
- .hv-scroll{display:none}
- .hv-h1{font-size:clamp(58px,17vw,110px)}
+@media(max-width:900px){
+ .hero-v{padding:28px 20px 30px;min-height:auto}
+ .hv-h1{font-size:clamp(50px,13vw,110px)}
  .hv-bot p{font-size:15.5px}
+}
+
+@media(max-width:640px){
+ .hero-v{padding:24px 18px 44px}
+ .hv-scroll{display:none}
+ .hv-h1{font-size:clamp(44px,15vw,84px)}
+ .hv-bot p{font-size:15px}
 }
