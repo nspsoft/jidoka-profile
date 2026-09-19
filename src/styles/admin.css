@@ -54,4 +54,14 @@
 .logo-preview-card.dark .logo-t b{color:#fff}
 .logo-preview-card.dark .logo-t i{color:#ff9296}
 
+/* Sub-nav & Section Cards */
+.adm-subnav{display:flex;gap:8px;border-bottom:2px solid var(--line);padding-bottom:10px;margin:16px 0 22px;flex-wrap:wrap}
+.adm-subnav button{padding:7px 14px;border-radius:8px;font:600 13px 'Barlow';color:var(--mut);background:var(--bg);border:1px solid var(--line);transition:.2s}
+.adm-subnav button:hover{color:var(--navy);border-color:var(--navy)}
+.adm-subnav button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.adm-box{border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:20px;background:#fff}
+.adm-box-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px}
+.adm-box-head h4{font-family:'Barlow Condensed';font-size:20px;text-transform:uppercase;color:var(--navy);margin:0}
+
+
 

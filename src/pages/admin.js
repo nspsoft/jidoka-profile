@@ -1,4 +1,4 @@
-import { DB, dbRead, dbWrite, DEF, dP, dN, dC, dR, dCo } from '../data/db.js';
+import { DB, dbRead, dbWrite, DEF, dP, dN, dC, dR, dCo, dPillars, dWhy, dIndustries, dTour, dMach, dFlow, dCerts, dWay, dHist, dGov } from '../data/db.js';
 import { isLogged, doLogin, doLogout, authFetch } from '../data/auth.js';
 import { esc, qs, qa, lines, parsePairs, slug } from '../components/dom.js';
 import { logo, ic } from '../components/icons.js';
@@ -296,6 +296,251 @@ export function aCompany() {
     + '<div class="f" style="display:flex;align-items:flex-end"><button class="btn btn-red">Simpan</button></div></form>';
 }
 
+/* ============================================================
+   KONTEN BERANDA: 4 Pilar, 4 Alasan, Sektor Industri
+   ============================================================ */
+export function aHomeContent(sub) {
+  sub = sub || 'pillars';
+  const subnav = '<div class="adm-subnav">'
+    + '<button class="' + (sub === 'pillars' ? 'on' : '') + '" data-sub="pillars">4 Pilar Layanan (What We Do)</button>'
+    + '<button class="' + (sub === 'why' ? 'on' : '') + '" data-sub="why">4 Alasan Memilih JRI (Why Us)</button>'
+    + '<button class="' + (sub === 'industries' ? 'on' : '') + '" data-sub="industries">Sektor Industri Pelanggan</button>'
+    + '</div>';
+
+  if (sub === 'pillars') {
+    const P = dPillars() || [];
+    return '<h3>Konten Beranda — 4 Pilar Layanan</h3>'
+      + '<p class="tiny">Ditampilkan di bagian "What we do" pada Beranda (PRD §7.1). Setiap pilar memiliki nomor urut, ikon, judul, dan deskripsi bilingual.</p>'
+      + subnav
+      + '<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-red btn-sm" id="addpillar">' + ic('plus') + ' Tambah Pilar</button></div>'
+      + P.map((p, i) => '<div class="adm-row"><div><b>' + esc(p.n) + '. ' + esc(L(p.t)) + '</b> <span class="mini">(' + esc(p.i) + ') — ' + esc(L(p.d)).slice(0, 80) + '…</span></div><div style="display:flex;gap:8px"><button class="btn btn-line btn-sm" data-pe-pillar="' + i + '">' + ic('edit') + ' Edit</button><button class="btn btn-sm" style="color:var(--red);border:1.5px solid var(--red);border-radius:9px;padding:8px 12px" data-pd-pillar="' + i + '">' + ic('trash') + '</button></div></div>').join('')
+      + '<div id="pillared"></div>';
+  }
+
+  if (sub === 'why') {
+    const W = dWhy() || [];
+    return '<h3>Konten Beranda — 4 Alasan Memilih JRI</h3>'
+      + '<p class="tiny">Ditampilkan di bagian "Why us" pada Beranda (PRD §7.1). Menampilkan poin keunggulan utama perusahaan.</p>'
+      + subnav
+      + '<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-red btn-sm" id="addwhy">' + ic('plus') + ' Tambah Alasan</button></div>'
+      + W.map((w, i) => '<div class="adm-row"><div><b>' + esc(L(w.t)) + '</b> <span class="mini">(' + esc(w.i) + ') — ' + esc(L(w.d)).slice(0, 80) + '…</span></div><div style="display:flex;gap:8px"><button class="btn btn-line btn-sm" data-pe-why="' + i + '">' + ic('edit') + ' Edit</button><button class="btn btn-sm" style="color:var(--red);border:1.5px solid var(--red);border-radius:9px;padding:8px 12px" data-pd-why="' + i + '">' + ic('trash') + '</button></div></div>').join('')
+      + '<div id="whyed"></div>';
+  }
+
+  if (sub === 'industries') {
+    const IND = dIndustries() || [];
+    return '<h3>Konten Beranda & Aplikasi — Sektor Industri</h3>'
+      + '<p class="tiny">Ditampilkan di Beranda dan Halaman Application (PRD §7.3). Mengelompokkan solusi kemasan per sektor bisnis.</p>'
+      + subnav
+      + '<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-red btn-sm" id="addind">' + ic('plus') + ' Tambah Industri</button></div>'
+      + IND.map((ind, i) => '<div class="adm-row"><div><b>' + esc(L(ind.name)) + '</b> ' + (ind.jp ? '<span class="mini">[' + esc(ind.jp) + ']</span> ' : '') + '<span class="mini">/' + esc(ind.id) + ' · ' + esc(L(ind.d)).slice(0, 70) + '…</span></div><div style="display:flex;gap:8px"><button class="btn btn-line btn-sm" data-pe-ind="' + i + '">' + ic('edit') + ' Edit</button><button class="btn btn-sm" style="color:var(--red);border:1.5px solid var(--red);border-radius:9px;padding:8px 12px" data-pd-ind="' + i + '">' + ic('trash') + '</button></div></div>').join('')
+      + '<div id="inded"></div>';
+  }
+}
+
+export function aPillarForm(i) {
+  const P = dPillars() || [];
+  const p = i >= 0 ? P[i] : { n: '0' + (P.length + 1), i: 'gear', t: { en: '', id: '' }, d: { en: '', id: '' } };
+  return '<form id="pillarform" class="form" style="margin-top:18px;border-top:2px solid var(--line);padding-top:18px">'
+    + '<input type="hidden" name="i" value="' + i + '">'
+    + fText('n', 'Nomor Pilar (mis. 01, 02)', p.n, 1)
+    + fSel('i', 'Ikon', ['gear', 'factory', 'shield', 'truck', 'box', 'layers', 'trend', 'award', 'clock'], p.i)
+    + fBi('t', 'Judul Pilar', p.t)
+    + fBiTa('d', 'Deskripsi Pilar', p.d)
+    + '<div class="f-full" style="display:flex;gap:10px"><button class="btn btn-red">Simpan Pilar</button><button type="button" class="btn btn-line" id="pillarcancel">Batal</button></div></form>';
+}
+
+export function aWhyForm(i) {
+  const W = dWhy() || [];
+  const w = i >= 0 ? W[i] : { i: 'award', t: { en: '', id: '' }, d: { en: '', id: '' } };
+  return '<form id="whyform" class="form" style="margin-top:18px;border-top:2px solid var(--line);padding-top:18px">'
+    + '<input type="hidden" name="i" value="' + i + '">'
+    + fSel('i', 'Ikon', ['award', 'gauge', 'clock', 'trend', 'shield', 'factory', 'gear', 'check'], w.i)
+    + fBi('t', 'Judul Alasan', w.t)
+    + fBiTa('d', 'Deskripsi Alasan', w.d)
+    + '<div class="f-full" style="display:flex;gap:10px"><button class="btn btn-red">Simpan Alasan</button><button type="button" class="btn btn-line" id="whycancel">Batal</button></div></form>';
+}
+
+export function aIndForm(i) {
+  const IND = dIndustries() || [];
+  const ind = i >= 0 ? IND[i] : { id: '', i: 'truck', jp: '', name: { en: '', id: '' }, d: { en: '', id: '' }, cases: [{ en: '', id: '' }, { en: '', id: '' }], prods: [] };
+  const c1 = (ind.cases && ind.cases[0]) || { en: '', id: '' };
+  const c2 = (ind.cases && ind.cases[1]) || { en: '', id: '' };
+  return '<form id="indform" class="form" style="margin-top:18px;border-top:2px solid var(--line);padding-top:18px">'
+    + '<input type="hidden" name="i" value="' + i + '">'
+    + fText('id', 'Slug URL / ID (mis. automotive, steel)', ind.id, 1)
+    + fText('jp', 'Teks Kanji Jepang (mis. 自動車)', ind.jp || '')
+    + fSel('i', 'Ikon', ['truck', 'layers', 'factory', 'box', 'shield', 'gear'], ind.i)
+    + fBi('name', 'Nama Industri', ind.name)
+    + fBiTa('d', 'Deskripsi Solusi Industri', ind.d)
+    + fBi('case1', 'Studi Kasus 1', c1)
+    + fBi('case2', 'Studi Kasus 2', c2)
+    + fText('prods', 'Slug Produk Terkait (pisahkan koma, mis. karton-box, imprabox)', (ind.prods || []).join(', '))
+    + '<div class="f-full" style="display:flex;gap:10px"><button class="btn btn-red">Simpan Industri</button><button type="button" class="btn btn-line" id="indcancel">Batal</button></div></form>';
+}
+
+/* ============================================================
+   PABRIK & MUTU: Tour, Machinery, Flow, Certs
+   ============================================================ */
+export function aFactoryQuality(sub) {
+  sub = sub || 'tour';
+  const subnav = '<div class="adm-subnav">'
+    + '<button class="' + (sub === 'tour' ? 'on' : '') + '" data-sub="tour">Digital Factory Tour (5 Tahap)</button>'
+    + '<button class="' + (sub === 'mach' ? 'on' : '') + '" data-sub="mach">Daftar Mesin Pabrik</button>'
+    + '<button class="' + (sub === 'flow' ? 'on' : '') + '" data-sub="flow">Alur Produksi</button>'
+    + '<button class="' + (sub === 'certs' ? 'on' : '') + '" data-sub="certs">Sertifikasi & Standar Mutu</button>'
+    + '</div>';
+
+  if (sub === 'tour') {
+    const T = dTour() || [];
+    return '<h3>Pabrik & Mutu — Digital Factory Tour</h3>'
+      + '<p class="tiny">Ditampilkan di Beranda & Halaman Manufacturing (PRD §7.4). Menggambarkan 5 tahapan tur fasilitas pabrik.</p>'
+      + subnav
+      + '<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-red btn-sm" id="addtour">' + ic('plus') + ' Tambah Tahap Tur</button></div>'
+      + T.map((t, i) => '<div class="adm-row"><div><b>' + esc(t.n) + '. ' + esc(L(t.name)) + '</b> ' + (t.jp ? '<span class="mini">[' + esc(t.jp) + ']</span> ' : '') + '<span class="mini">— ' + esc(L(t.d)).slice(0, 70) + '…</span></div><div style="display:flex;gap:8px"><button class="btn btn-line btn-sm" data-pe-tour="' + i + '">' + ic('edit') + ' Edit</button><button class="btn btn-sm" style="color:var(--red);border:1.5px solid var(--red);border-radius:9px;padding:8px 12px" data-pd-tour="' + i + '">' + ic('trash') + '</button></div></div>').join('')
+      + '<div id="toured"></div>';
+  }
+
+  if (sub === 'mach') {
+    const M = dMach() || [];
+    return '<h3>Pabrik & Mutu — Daftar Mesin Pabrik</h3>'
+      + '<p class="tiny">Ditampilkan di Halaman Manufacturing — tabel spesifikasi armada mesin produksi utama.</p>'
+      + subnav
+      + '<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-red btn-sm" id="addmach">' + ic('plus') + ' Tambah Mesin</button></div>'
+      + M.map((m, i) => '<div class="adm-row"><div><b>' + esc(m[0]) + '</b> <span class="mini">' + esc(m[1]) + ' Unit · Lebar: ' + esc(m[2]) + ' · ' + esc(m[3]) + '</span></div><div style="display:flex;gap:8px"><button class="btn btn-line btn-sm" data-pe-mach="' + i + '">' + ic('edit') + ' Edit</button><button class="btn btn-sm" style="color:var(--red);border:1.5px solid var(--red);border-radius:9px;padding:8px 12px" data-pd-mach="' + i + '">' + ic('trash') + '</button></div></div>').join('')
+      + '<div id="mached"></div>';
+  }
+
+  if (sub === 'flow') {
+    const F = dFlow() || [];
+    return '<h3>Pabrik & Mutu — Alur Produksi</h3>'
+      + '<p class="tiny">Ditampilkan di Halaman Manufacturing — alur tahapan proses dari awal hingga akhir.</p>'
+      + subnav
+      + '<form id="flowform" class="form" style="margin-top:14px">'
+      + fTa('flow', 'Tahapan Alur Produksi (Satu tahap per baris)', F.join('\n'))
+      + '<div class="f-full"><button class="btn btn-red">Simpan Alur Produksi</button></div></form>';
+  }
+
+  if (sub === 'certs') {
+    const C = dCerts() || [];
+    return '<h3>Pabrik & Mutu — Sertifikasi & Standar Mutu</h3>'
+      + '<p class="tiny">Ditampilkan di Halaman Quality (PRD §7.5). Daftar sertifikasi ISO, standar internal, dan persetujuan customer.</p>'
+      + subnav
+      + '<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-red btn-sm" id="addcert">' + ic('plus') + ' Tambah Sertifikasi</button></div>'
+      + C.map((c, i) => '<div class="adm-row"><div><b>' + esc(L(c.name)) + '</b> <span class="mini">— ' + esc(L(c.d)).slice(0, 80) + '…</span></div><div style="display:flex;gap:8px"><button class="btn btn-line btn-sm" data-pe-cert="' + i + '">' + ic('edit') + ' Edit</button><button class="btn btn-sm" style="color:var(--red);border:1.5px solid var(--red);border-radius:9px;padding:8px 12px" data-pd-cert="' + i + '">' + ic('trash') + '</button></div></div>').join('')
+      + '<div id="certed"></div>';
+  }
+}
+
+export function aTourForm(i) {
+  const T = dTour() || [];
+  const t = i >= 0 ? T[i] : { n: '0' + (T.length + 1), jp: '', name: { en: '', id: '' }, d: { en: '', id: '' }, data: [] };
+  const pairs = a => (a || []).map(r => r[0] + ' | ' + r[1]).join('\n');
+  return '<form id="tourform" class="form" style="margin-top:18px;border-top:2px solid var(--line);padding-top:18px">'
+    + '<input type="hidden" name="i" value="' + i + '">'
+    + fText('n', 'Nomor Tahap (mis. 01, 02)', t.n, 1)
+    + fText('jp', 'Teks Kanji Jepang (mis. 原材料)', t.jp)
+    + fBi('name', 'Nama Tahap Tur', t.name)
+    + fBiTa('d', 'Deskripsi Tahap', t.d)
+    + fTa('data', 'Data Teknis / Matriks (Format per baris: Label | Nilai)', pairs(t.data))
+    + '<div class="f-full" style="display:flex;gap:10px"><button class="btn btn-red">Simpan Tahap Tur</button><button type="button" class="btn btn-line" id="tourcancel">Batal</button></div></form>';
+}
+
+export function aMachForm(i) {
+  const M = dMach() || [];
+  const m = i >= 0 ? M[i] : ['', '1', '', ''];
+  return '<form id="machform" class="form" style="margin-top:18px;border-top:2px solid var(--line);padding-top:18px">'
+    + '<input type="hidden" name="i" value="' + i + '">'
+    + fText('name', 'Tipe / Nama Mesin (mis. Corrugator 5-ply)', m[0], 1)
+    + fText('qty', 'Jumlah Unit (mis. 2)', m[1], 1)
+    + fText('cap', 'Kapasitas / Lebar Maksimum (mis. 1,400 mm)', m[2], 1)
+    + fText('fn', 'Fungsi / Produk Dihasilkan (mis. Karton box board)', m[3], 1)
+    + '<div class="f-full" style="display:flex;gap:10px"><button class="btn btn-red">Simpan Mesin</button><button type="button" class="btn btn-line" id="machcancel">Batal</button></div></form>';
+}
+
+export function aCertForm(i) {
+  const C = dCerts() || [];
+  const c = i >= 0 ? C[i] : { name: { en: '', id: '' }, d: { en: '', id: '' } };
+  return '<form id="certform" class="form" style="margin-top:18px;border-top:2px solid var(--line);padding-top:18px">'
+    + '<input type="hidden" name="i" value="' + i + '">'
+    + fBi('name', 'Nama Sertifikasi / Standar', c.name)
+    + fBiTa('d', 'Deskripsi & Status (mis. Certified / In-Process)', c.d)
+    + '<div class="f-full" style="display:flex;gap:10px"><button class="btn btn-red">Simpan Sertifikasi</button><button type="button" class="btn btn-line" id="certcancel">Batal</button></div></form>';
+}
+
+/* ============================================================
+   OUR WAY & KORPORAT: 7 Prinsip, Sejarah, Governance
+   ============================================================ */
+export function aWayCorporate(sub) {
+  sub = sub || 'way';
+  const subnav = '<div class="adm-subnav">'
+    + '<button class="' + (sub === 'way' ? 'on' : '') + '" data-sub="way">7 Prinsip DNA Jepang (Our Way)</button>'
+    + '<button class="' + (sub === 'hist' ? 'on' : '') + '" data-sub="hist">Linimasa Sejarah Perusahaan</button>'
+    + '<button class="' + (sub === 'gov' ? 'on' : '') + '" data-sub="gov">Tata Kelola Perusahaan (Governance)</button>'
+    + '</div>';
+
+  if (sub === 'way') {
+    const W = dWay() || [];
+    return '<h3>Our Way & Korporat — 7 Prinsip DNA Jepang</h3>'
+      + '<p class="tiny">Ditampilkan di Halaman Our Way & Beranda (PRD §7.6). Fondasi filosofi manufaktur Jepang (Kaizen, 5S, Jidoka, dll).</p>'
+      + subnav
+      + '<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-red btn-sm" id="addwayp">' + ic('plus') + ' Tambah Prinsip</button></div>'
+      + W.map((w, i) => '<div class="adm-row"><div><b>' + esc(w.n) + '</b> ' + (w.kj ? '<span class="mini">[' + esc(w.kj) + ']</span> ' : '') + '<span class="mini">— ' + esc(L(w.s)) + '</span></div><div style="display:flex;gap:8px"><button class="btn btn-line btn-sm" data-pe-wayp="' + i + '">' + ic('edit') + ' Edit</button><button class="btn btn-sm" style="color:var(--red);border:1.5px solid var(--red);border-radius:9px;padding:8px 12px" data-pd-wayp="' + i + '">' + ic('trash') + '</button></div></div>').join('')
+      + '<div id="wayped"></div>';
+  }
+
+  if (sub === 'hist') {
+    const H = dHist() || [];
+    return '<h3>Our Way & Korporat — Linimasa Sejarah Perusahaan</h3>'
+      + '<p class="tiny">Ditampilkan di Halaman Corporate (PRD §7.7). Tonggak sejarah pendirian dan ekspansi PT JRI.</p>'
+      + subnav
+      + '<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-red btn-sm" id="addhist">' + ic('plus') + ' Tambah Tahun</button></div>'
+      + H.map((h, i) => '<div class="adm-row"><div><b>Tahun ' + esc(h.yr) + '</b> <span class="mini">— ' + esc(L(h.t)).slice(0, 80) + '…</span></div><div style="display:flex;gap:8px"><button class="btn btn-line btn-sm" data-pe-hist="' + i + '">' + ic('edit') + ' Edit</button><button class="btn btn-sm" style="color:var(--red);border:1.5px solid var(--red);border-radius:9px;padding:8px 12px" data-pd-hist="' + i + '">' + ic('trash') + '</button></div></div>').join('')
+      + '<div id="histed"></div>';
+  }
+
+  if (sub === 'gov') {
+    const G = dGov() || [];
+    return '<h3>Our Way & Korporat — Tata Kelola Perusahaan (Governance)</h3>'
+      + '<p class="tiny">Ditampilkan di Halaman Corporate (PRD §7.7). Poin komitmen tata kelola dan kepatuhan regulasi.</p>'
+      + subnav
+      + '<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-red btn-sm" id="addgov">' + ic('plus') + ' Tambah Poin</button></div>'
+      + G.map((g, i) => '<div class="adm-row"><div><b>' + (i + 1) + '. ' + esc(L(g)).slice(0, 90) + '…</b></div><div style="display:flex;gap:8px"><button class="btn btn-line btn-sm" data-pe-gov="' + i + '">' + ic('edit') + ' Edit</button><button class="btn btn-sm" style="color:var(--red);border:1.5px solid var(--red);border-radius:9px;padding:8px 12px" data-pd-gov="' + i + '">' + ic('trash') + '</button></div></div>').join('')
+      + '<div id="goved"></div>';
+  }
+}
+
+export function aWayPForm(i) {
+  const W = dWay() || [];
+  const w = i >= 0 ? W[i] : { kj: '', n: '', s: { en: '', id: '' }, d: { en: '', id: '' } };
+  return '<form id="waypform" class="form" style="margin-top:18px;border-top:2px solid var(--line);padding-top:18px">'
+    + '<input type="hidden" name="i" value="' + i + '">'
+    + fText('kj', 'Huruf Kanji (mis. 改善, 5S, 自働化)', w.kj, 1)
+    + fText('n', 'Nama Prinsip (mis. Kaizen, Jidoka, Heijunka)', w.n, 1)
+    + fBi('s', 'Subjudul / Esensi Prinsip', w.s)
+    + fBiTa('d', 'Deskripsi Lengkap', w.d)
+    + '<div class="f-full" style="display:flex;gap:10px"><button class="btn btn-red">Simpan Prinsip</button><button type="button" class="btn btn-line" id="waypcancel">Batal</button></div></form>';
+}
+
+export function aHistForm(i) {
+  const H = dHist() || [];
+  const h = i >= 0 ? H[i] : { yr: '', t: { en: '', id: '' } };
+  return '<form id="histform" class="form" style="margin-top:18px;border-top:2px solid var(--line);padding-top:18px">'
+    + '<input type="hidden" name="i" value="' + i + '">'
+    + fText('yr', 'Tahun (mis. 2012, 2026)', h.yr, 1)
+    + fBiTa('t', 'Pencapaian / Sejarah', h.t)
+    + '<div class="f-full" style="display:flex;gap:10px"><button class="btn btn-red">Simpan Sejarah</button><button type="button" class="btn btn-line" id="histcancel">Batal</button></div></form>';
+}
+
+export function aGovForm(i) {
+  const G = dGov() || [];
+  const g = i >= 0 ? G[i] : { en: '', id: '' };
+  return '<form id="govform" class="form" style="margin-top:18px;border-top:2px solid var(--line);padding-top:18px">'
+    + '<input type="hidden" name="i" value="' + i + '">'
+    + fBiTa('t', 'Poin Tata Kelola / Kepatuhan', g)
+    + '<div class="f-full" style="display:flex;gap:10px"><button class="btn btn-red">Simpan Tata Kelola</button><button type="button" class="btn btn-line" id="govcancel">Batal</button></div></form>';
+}
+
 export function aBackup() {
   return '<h3>Backup / Restore</h3>'
     + '<p class="tiny">Data CMS tersimpan di database server. Format data 100% kompatibel dengan cadangan lama REV-6 (PRD §5). Gunakan <b>Muat JSON</b> untuk restore cadangan lama atau eksternal.</p>'
@@ -308,7 +553,7 @@ export function aBackup() {
     + '<p class="tiny" style="margin-top:14px">Data yang diimpor langsung disimpan ke database MySQL server dan ter-refresh di semua halaman website.</p>';
 }
 
-export function renderAdmin(tab) {
+export function renderAdmin(tab, sub) {
   if (!isLogged()) {
     return '<section class="sec" style="padding-top:48px"><div class="wrap" style="max-width:430px"><div class="panel-card">'
       + '<h3 style="font-family:\'Barlow Condensed\';font-size:26px;text-transform:uppercase;color:var(--navy)">Login Admin CMS</h3>'
@@ -324,7 +569,10 @@ export function renderAdmin(tab) {
     ['dash', 'Dashboard'],
     ['inbox', 'Inbox' + (unhandled ? ' (' + unhandled + ')' : '')],
     ['profile', 'Profil & Logo'],
+    ['home-content', 'Konten Beranda'],
     ['products', 'Produk'],
+    ['factory-quality', 'Pabrik & Mutu'],
+    ['way-corporate', 'Our Way & Korporat'],
     ['news', 'Berita & Aktivitas'],
     ['caps', 'Kapabilitas'],
     ['resources', 'Resources'],
@@ -333,7 +581,18 @@ export function renderAdmin(tab) {
   ];
   let body = '';
   try {
-    body = tab === 'inbox' ? aInbox() : tab === 'profile' ? aProfile() : tab === 'products' ? aProducts() : tab === 'news' ? aNews() : tab === 'caps' ? aCaps() : tab === 'resources' ? aRes() : tab === 'company' ? aCompany() : tab === 'backup' ? aBackup() : aDash();
+    body = tab === 'inbox' ? aInbox()
+      : tab === 'profile' ? aProfile()
+      : tab === 'home-content' ? aHomeContent(sub)
+      : tab === 'products' ? aProducts()
+      : tab === 'factory-quality' ? aFactoryQuality(sub)
+      : tab === 'way-corporate' ? aWayCorporate(sub)
+      : tab === 'news' ? aNews()
+      : tab === 'caps' ? aCaps()
+      : tab === 'resources' ? aRes()
+      : tab === 'company' ? aCompany()
+      : tab === 'backup' ? aBackup()
+      : aDash();
   } catch (e) {
     body = '<p style="color:var(--red)">Error: ' + esc(e.message) + '</p>';
   }
@@ -379,6 +638,7 @@ export function mountAdmin(seg, router, goHash) {
   }
 
   qa('.adm-nav [data-at]').forEach(b => b.onclick = () => goHash('#/admin/' + b.dataset.at));
+  qa('.adm-subnav [data-sub]').forEach(b => b.onclick = () => goHash('#/admin/' + (seg[1] || 'home-content') + '/' + b.dataset.sub));
 
   const out = qs('#admout');
   if (out) {
@@ -470,6 +730,133 @@ export function mountAdmin(seg, router, goHash) {
     });
   }
 
+  if (T === 'home-content') {
+    const sub = seg[2] || 'pillars';
+
+    if (sub === 'pillars') {
+      const ed = qs('#pillared');
+      const open = i => {
+        ed.innerHTML = aPillarForm(i);
+        ed.scrollIntoView({ behavior: 'smooth' });
+        const f = qs('#pillarform');
+        f.onsubmit = e => {
+          e.preventDefault();
+          const fd = {};
+          qa('input,select,textarea', f).forEach(el => fd[el.name] = el.value);
+          const P = dPillars() || [];
+          const o = {
+            n: (fd.n || '').trim() || '01',
+            i: fd.i,
+            t: { en: fd.t_en, id: fd.t_id },
+            d: { en: fd.d_en, id: fd.d_id }
+          };
+          if (i >= 0) P[i] = o;
+          else P.push(o);
+          DB.set('pillars', P);
+          toast('Pilar tersimpan');
+          router(true);
+        };
+        qs('#pillarcancel').onclick = () => { ed.innerHTML = ''; };
+      };
+      const ap = qs('#addpillar');
+      if (ap) ap.onclick = () => open(-1);
+      qa('[data-pe-pillar]').forEach(b => b.onclick = () => open(+b.dataset.pePillar));
+      qa('[data-pd-pillar]').forEach(b => b.onclick = () => {
+        if (confirm('Hapus pilar ini?')) {
+          const P = dPillars() || [];
+          P.splice(+b.dataset.pdPillar, 1);
+          DB.set('pillars', P);
+          toast('Pilar dihapus');
+          router(true);
+        }
+      });
+    }
+
+    if (sub === 'why') {
+      const ed = qs('#whyed');
+      const open = i => {
+        ed.innerHTML = aWhyForm(i);
+        ed.scrollIntoView({ behavior: 'smooth' });
+        const f = qs('#whyform');
+        f.onsubmit = e => {
+          e.preventDefault();
+          const fd = {};
+          qa('input,select,textarea', f).forEach(el => fd[el.name] = el.value);
+          const W = dWhy() || [];
+          const o = {
+            i: fd.i,
+            t: { en: fd.t_en, id: fd.t_id },
+            d: { en: fd.d_en, id: fd.d_id }
+          };
+          if (i >= 0) W[i] = o;
+          else W.push(o);
+          DB.set('why', W);
+          toast('Alasan tersimpan');
+          router(true);
+        };
+        qs('#whycancel').onclick = () => { ed.innerHTML = ''; };
+      };
+      const aw = qs('#addwhy');
+      if (aw) aw.onclick = () => open(-1);
+      qa('[data-pe-why]').forEach(b => b.onclick = () => open(+b.dataset.peWhy));
+      qa('[data-pd-why]').forEach(b => b.onclick = () => {
+        if (confirm('Hapus alasan ini?')) {
+          const W = dWhy() || [];
+          W.splice(+b.dataset.pdWhy, 1);
+          DB.set('why', W);
+          toast('Alasan dihapus');
+          router(true);
+        }
+      });
+    }
+
+    if (sub === 'industries') {
+      const ed = qs('#inded');
+      const open = i => {
+        ed.innerHTML = aIndForm(i);
+        ed.scrollIntoView({ behavior: 'smooth' });
+        const f = qs('#indform');
+        f.onsubmit = e => {
+          e.preventDefault();
+          const fd = {};
+          qa('input,select,textarea', f).forEach(el => fd[el.name] = el.value);
+          const IND = dIndustries() || [];
+          const cases = [];
+          if (fd.case1_en || fd.case1_id) cases.push({ en: fd.case1_en, id: fd.case1_id });
+          if (fd.case2_en || fd.case2_id) cases.push({ en: fd.case2_en, id: fd.case2_id });
+          const prods = (fd.prods || '').split(',').map(s => s.trim()).filter(Boolean);
+          const o = {
+            id: (fd.id || '').trim().toLowerCase(),
+            i: fd.i,
+            jp: (fd.jp || '').trim(),
+            name: { en: fd.name_en, id: fd.name_id },
+            d: { en: fd.d_en, id: fd.d_id },
+            cases: cases,
+            prods: prods
+          };
+          if (i >= 0) IND[i] = o;
+          else IND.push(o);
+          DB.set('industries', IND);
+          toast('Industri tersimpan');
+          router(true);
+        };
+        qs('#indcancel').onclick = () => { ed.innerHTML = ''; };
+      };
+      const ai = qs('#addind');
+      if (ai) ai.onclick = () => open(-1);
+      qa('[data-pe-ind]').forEach(b => b.onclick = () => open(+b.dataset.peInd));
+      qa('[data-pd-ind]').forEach(b => b.onclick = () => {
+        if (confirm('Hapus sektor industri ini?')) {
+          const IND = dIndustries() || [];
+          IND.splice(+b.dataset.pdInd, 1);
+          DB.set('industries', IND);
+          toast('Industri dihapus');
+          router(true);
+        }
+      });
+    }
+  }
+
   if (T === 'products') {
     const ped = qs('#ped');
     const open = i => {
@@ -498,6 +885,248 @@ export function mountAdmin(seg, router, goHash) {
         router(true);
       }
     });
+  }
+
+  if (T === 'factory-quality') {
+    const sub = seg[2] || 'tour';
+
+    if (sub === 'tour') {
+      const ed = qs('#toured');
+      const open = i => {
+        ed.innerHTML = aTourForm(i);
+        ed.scrollIntoView({ behavior: 'smooth' });
+        const f = qs('#tourform');
+        f.onsubmit = e => {
+          e.preventDefault();
+          const fd = {};
+          qa('input,textarea', f).forEach(el => fd[el.name] = el.value);
+          const T = dTour() || [];
+          const o = {
+            n: (fd.n || '').trim() || '01',
+            jp: (fd.jp || '').trim(),
+            name: { en: fd.name_en, id: fd.name_id },
+            d: { en: fd.d_en, id: fd.d_id },
+            data: parsePairs(fd.data)
+          };
+          if (i >= 0) T[i] = o;
+          else T.push(o);
+          DB.set('tour', T);
+          toast('Tahap tur tersimpan');
+          router(true);
+        };
+        qs('#tourcancel').onclick = () => { ed.innerHTML = ''; };
+      };
+      const at = qs('#addtour');
+      if (at) at.onclick = () => open(-1);
+      qa('[data-pe-tour]').forEach(b => b.onclick = () => open(+b.dataset.peTour));
+      qa('[data-pd-tour]').forEach(b => b.onclick = () => {
+        if (confirm('Hapus tahap tur ini?')) {
+          const T = dTour() || [];
+          T.splice(+b.dataset.pdTour, 1);
+          DB.set('tour', T);
+          toast('Tahap tur dihapus');
+          router(true);
+        }
+      });
+    }
+
+    if (sub === 'mach') {
+      const ed = qs('#mached');
+      const open = i => {
+        ed.innerHTML = aMachForm(i);
+        ed.scrollIntoView({ behavior: 'smooth' });
+        const f = qs('#machform');
+        f.onsubmit = e => {
+          e.preventDefault();
+          const fd = {};
+          qa('input', f).forEach(el => fd[el.name] = el.value);
+          const M = dMach() || [];
+          const row = [(fd.name || '').trim(), (fd.qty || '').trim(), (fd.cap || '').trim(), (fd.fn || '').trim()];
+          if (i >= 0) M[i] = row;
+          else M.push(row);
+          DB.set('mach', M);
+          toast('Mesin tersimpan');
+          router(true);
+        };
+        qs('#machcancel').onclick = () => { ed.innerHTML = ''; };
+      };
+      const am = qs('#addmach');
+      if (am) am.onclick = () => open(-1);
+      qa('[data-pe-mach]').forEach(b => b.onclick = () => open(+b.dataset.peMach));
+      qa('[data-pd-mach]').forEach(b => b.onclick = () => {
+        if (confirm('Hapus mesin ini?')) {
+          const M = dMach() || [];
+          M.splice(+b.dataset.pdMach, 1);
+          DB.set('mach', M);
+          toast('Mesin dihapus');
+          router(true);
+        }
+      });
+    }
+
+    if (sub === 'flow') {
+      const f = qs('#flowform');
+      if (f) {
+        f.onsubmit = e => {
+          e.preventDefault();
+          const fl = lines(f.flow.value);
+          DB.set('flow', fl);
+          toast('Alur produksi tersimpan');
+          router(true);
+        };
+      }
+    }
+
+    if (sub === 'certs') {
+      const ed = qs('#certed');
+      const open = i => {
+        ed.innerHTML = aCertForm(i);
+        ed.scrollIntoView({ behavior: 'smooth' });
+        const f = qs('#certform');
+        f.onsubmit = e => {
+          e.preventDefault();
+          const fd = {};
+          qa('input,textarea', f).forEach(el => fd[el.name] = el.value);
+          const C = dCerts() || [];
+          const o = {
+            name: { en: fd.name_en, id: fd.name_id },
+            d: { en: fd.d_en, id: fd.d_id }
+          };
+          if (i >= 0) C[i] = o;
+          else C.push(o);
+          DB.set('certs', C);
+          toast('Sertifikasi tersimpan');
+          router(true);
+        };
+        qs('#certcancel').onclick = () => { ed.innerHTML = ''; };
+      };
+      const ac = qs('#addcert');
+      if (ac) ac.onclick = () => open(-1);
+      qa('[data-pe-cert]').forEach(b => b.onclick = () => open(+b.dataset.peCert));
+      qa('[data-pd-cert]').forEach(b => b.onclick = () => {
+        if (confirm('Hapus sertifikasi ini?')) {
+          const C = dCerts() || [];
+          C.splice(+b.dataset.pdCert, 1);
+          DB.set('certs', C);
+          toast('Sertifikasi dihapus');
+          router(true);
+        }
+      });
+    }
+  }
+
+  if (T === 'way-corporate') {
+    const sub = seg[2] || 'way';
+
+    if (sub === 'way') {
+      const ed = qs('#wayped');
+      const open = i => {
+        ed.innerHTML = aWayPForm(i);
+        ed.scrollIntoView({ behavior: 'smooth' });
+        const f = qs('#waypform');
+        f.onsubmit = e => {
+          e.preventDefault();
+          const fd = {};
+          qa('input,textarea', f).forEach(el => fd[el.name] = el.value);
+          const W = dWay() || [];
+          const o = {
+            kj: (fd.kj || '').trim(),
+            n: (fd.n || '').trim(),
+            s: { en: fd.s_en, id: fd.s_id },
+            d: { en: fd.d_en, id: fd.d_id }
+          };
+          if (i >= 0) W[i] = o;
+          else W.push(o);
+          DB.set('way', W);
+          toast('Prinsip tersimpan');
+          router(true);
+        };
+        qs('#waypcancel').onclick = () => { ed.innerHTML = ''; };
+      };
+      const aw = qs('#addwayp');
+      if (aw) aw.onclick = () => open(-1);
+      qa('[data-pe-wayp]').forEach(b => b.onclick = () => open(+b.dataset.peWayp));
+      qa('[data-pd-wayp]').forEach(b => b.onclick = () => {
+        if (confirm('Hapus prinsip ini?')) {
+          const W = dWay() || [];
+          W.splice(+b.dataset.pdWayp, 1);
+          DB.set('way', W);
+          toast('Prinsip dihapus');
+          router(true);
+        }
+      });
+    }
+
+    if (sub === 'hist') {
+      const ed = qs('#histed');
+      const open = i => {
+        ed.innerHTML = aHistForm(i);
+        ed.scrollIntoView({ behavior: 'smooth' });
+        const f = qs('#histform');
+        f.onsubmit = e => {
+          e.preventDefault();
+          const fd = {};
+          qa('input,textarea', f).forEach(el => fd[el.name] = el.value);
+          const H = dHist() || [];
+          const o = {
+            yr: (fd.yr || '').trim(),
+            t: { en: fd.t_en, id: fd.t_id }
+          };
+          if (i >= 0) H[i] = o;
+          else H.push(o);
+          DB.set('hist', H);
+          toast('Sejarah tersimpan');
+          router(true);
+        };
+        qs('#histcancel').onclick = () => { ed.innerHTML = ''; };
+      };
+      const ah = qs('#addhist');
+      if (ah) ah.onclick = () => open(-1);
+      qa('[data-pe-hist]').forEach(b => b.onclick = () => open(+b.dataset.peHist));
+      qa('[data-pd-hist]').forEach(b => b.onclick = () => {
+        if (confirm('Hapus tahun sejarah ini?')) {
+          const H = dHist() || [];
+          H.splice(+b.dataset.pdHist, 1);
+          DB.set('hist', H);
+          toast('Sejarah dihapus');
+          router(true);
+        }
+      });
+    }
+
+    if (sub === 'gov') {
+      const ed = qs('#goved');
+      const open = i => {
+        ed.innerHTML = aGovForm(i);
+        ed.scrollIntoView({ behavior: 'smooth' });
+        const f = qs('#govform');
+        f.onsubmit = e => {
+          e.preventDefault();
+          const fd = {};
+          qa('textarea', f).forEach(el => fd[el.name] = el.value);
+          const G = dGov() || [];
+          const o = { en: fd.t_en, id: fd.t_id };
+          if (i >= 0) G[i] = o;
+          else G.push(o);
+          DB.set('gov', G);
+          toast('Tata kelola tersimpan');
+          router(true);
+        };
+        qs('#govcancel').onclick = () => { ed.innerHTML = ''; };
+      };
+      const ag = qs('#addgov');
+      if (ag) ag.onclick = () => open(-1);
+      qa('[data-pe-gov]').forEach(b => b.onclick = () => open(+b.dataset.peGov));
+      qa('[data-pd-gov]').forEach(b => b.onclick = () => {
+        if (confirm('Hapus poin tata kelola ini?')) {
+          const G = dGov() || [];
+          G.splice(+b.dataset.pdGov, 1);
+          DB.set('gov', G);
+          toast('Tata kelola dihapus');
+          router(true);
+        }
+      });
+    }
   }
 
   if (T === 'news') {

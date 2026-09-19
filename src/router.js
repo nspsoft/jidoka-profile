@@ -64,7 +64,7 @@ export function router(force) {
     else if (page === 'product') html = renderProduct(seg[1]);
     else if (page === 'partnership') html = renderPartnership(seg[1]);
     else if (page === 'contact') html = renderContact(seg[1]);
-    else if (page === 'admin') html = renderAdmin(seg[1]);
+    else if (page === 'admin') html = renderAdmin(seg[1], seg[2]);
     else {
       html = ({
         home: renderHome,
