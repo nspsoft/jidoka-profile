@@ -56,7 +56,15 @@ router.post('/', requireAuth, upload.single('file'), async (req, res) => {
       filename: file.filename,
       orig_name: file.originalname,
       mime_type: file.mimetype,
-      size_bytes: file.size
+      size_bytes: file.size,
+      file: {
+        id: result.insertId,
+        url: publicUrl,
+        filename: file.filename,
+        orig_name: file.originalname,
+        mime_type: file.mimetype,
+        size_bytes: file.size
+      }
     });
   } catch (err) {
     console.error('File upload error:', err);

@@ -975,11 +975,13 @@ export function mountAdmin(seg, router, goHash) {
                 body: formData
               });
               const data = await res.json();
-              if (data.success && data.file && data.file.url) {
-                if (urlIn) urlIn.value = data.file.url;
-                upMsg.textContent = '✓ Video berhasil diunggah: ' + data.file.filename;
+              const videoUrl = (data.file && data.file.url) || data.url;
+              const videoName = (data.file && data.file.filename) || data.filename || file.name;
+              if (data.success && videoUrl) {
+                if (urlIn) urlIn.value = videoUrl;
+                upMsg.textContent = '✓ Video berhasil diunggah: ' + videoName;
                 upMsg.style.color = '#10b981';
-                updateTourVideoPreview(data.file.url);
+                updateTourVideoPreview(videoUrl);
                 toast('Video berhasil diunggah ke server');
               } else {
                 upMsg.textContent = 'Gagal upload: ' + (data.message || 'Error');
