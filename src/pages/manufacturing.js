@@ -25,18 +25,59 @@ export function renderManufacturing() {
     + '<div class="jc-foot"><span><span class="led g"></span>' + L({ en: 'Lines nominal', id: 'Line normal' }) + '</span><span><span class="led r"></span>' + L({ en: '1 line changeover', id: '1 line changeover' }) + '</span><span style="margin-left:auto">' + L({ en: 'Output — last 7 days', id: 'Output — 7 hari terakhir' }) + '</span></div></div></div></section>';
 }
 
+let tourMediaMode = 'video';
+
+function renderTourMedia(t, mode = 'video') {
+  const videoUrl = (t && t.video ? t.video.trim() : '');
+  const hasVideo = !!videoUrl;
+  const isVideo = hasVideo && mode === 'video';
+
+  const switcher = hasVideo ? (
+    '<div class="tour-media-switch">'
+    + '<button type="button" class="' + (isVideo ? 'on' : '') + '" data-tourmode="video">' + ic('play') + ' ' + L({ en: 'Factory Video', id: 'Video Pabrik' }) + '</button>'
+    + '<button type="button" class="' + (!isVideo ? 'on' : '') + '" data-tourmode="blueprint">' + ic('gear') + ' ' + L({ en: 'Blueprint', id: 'Diagram Cetak Biru' }) + '</button>'
+    + '</div>'
+  ) : '';
+
+  let mediaHtml = '';
+  if (isVideo) {
+    const ytMatch = videoUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+    if (ytMatch && ytMatch[1]) {
+      mediaHtml = '<div class="tour-video-wrap"><iframe class="tour-video" src="https://www.youtube-nocookie.com/embed/' + ytMatch[1] + '?autoplay=1&mute=1&loop=1&playlist=' + ytMatch[1] + '&rel=0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>';
+    } else {
+      mediaHtml = '<div class="tour-video-wrap"><video class="tour-video" controls autoplay muted loop playsinline poster="' + (t.poster || '') + '"><source src="' + videoUrl + '" type="video/mp4"><source src="' + videoUrl + '" type="video/webm"><p>Browser Anda tidak mendukung pemutar video HTML5.</p></video></div>';
+    }
+  } else {
+    mediaHtml = blueprint();
+  }
+
+  return '<div class="tour-art" id="tourart">' + switcher + mediaHtml + '</div>';
+}
+
 export function mountManufacturing() {
   const panel = qs('#tpanel');
   if (!panel) return;
-  const show = i => {
-    const t = dTour()[i];
+  let currentStep = 0;
+  const show = (i, mode = tourMediaMode) => {
+    currentStep = i;
+    tourMediaMode = mode;
+    const tourList = dTour() || [];
+    const t = tourList[i];
+    if (!t) return;
     qa('.tl-item').forEach((b, j) => b.classList.toggle('on', j === i));
-    panel.innerHTML = '<div class="tour-panel"><div class="tour-art">' + blueprint() + '</div><div class="tour-info"><div class="tour-t"><span class="tno">' + t.n + '</span><h3>' + L(t.name) + '</h3><span class="jp">' + t.jp + '</span></div><p>' + L(t.d) + '</p><div class="tour-data">' + t.data.map(d => '<div><b>' + d[0] + '</b><span>' + d[1] + '</span></div>').join('') + '</div></div>'
+    panel.innerHTML = '<div class="tour-panel">' + renderTourMedia(t, tourMediaMode) + '<div class="tour-info"><div class="tour-t"><span class="tno">' + t.n + '</span><h3>' + L(t.name) + '</h3><span class="jp">' + t.jp + '</span></div><p>' + L(t.d) + '</p><div class="tour-data">' + (t.data || []).map(d => '<div><b>' + d[0] + '</b><span>' + d[1] + '</span></div>').join('') + '</div></div>'
       + '<div class="tour-ctl"><button class="tbtn" id="tprev">' + ic('arrl') + ' ' + L({ en: 'Prev', id: 'Sebelumnya' }) + '</button><span id="tprog">' + t.n + ' / 05</span><button class="tbtn" id="tnext">' + L({ en: 'Next', id: 'Berikutnya' }) + ' ' + ic('arrow') + '</button></div></div>';
+    
+    qa('[data-tourmode]').forEach(btn => {
+      btn.onclick = () => {
+        show(currentStep, btn.dataset.tourmode);
+      };
+    });
+
     const prevBtn = qs('#tprev');
     const nextBtn = qs('#tnext');
-    if (prevBtn) prevBtn.onclick = () => show((i + dTour().length - 1) % dTour().length);
-    if (nextBtn) nextBtn.onclick = () => show((i + 1) % dTour().length);
+    if (prevBtn) prevBtn.onclick = () => show((i + tourList.length - 1) % tourList.length);
+    if (nextBtn) nextBtn.onclick = () => show((i + 1) % tourList.length);
   };
   qa('.tl-item').forEach(b => b.onclick = () => show(+b.dataset.i));
   show(0);

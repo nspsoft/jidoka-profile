@@ -394,10 +394,10 @@ export function aFactoryQuality(sub) {
   if (sub === 'tour') {
     const T = dTour() || [];
     return '<h3>Pabrik & Mutu — Digital Factory Tour</h3>'
-      + '<p class="tiny">Ditampilkan di Beranda & Halaman Manufacturing (PRD §7.4). Menggambarkan 5 tahapan tur fasilitas pabrik.</p>'
+      + '<p class="tiny">Ditampilkan di Beranda & Halaman Manufacturing (PRD §7.4). Menggambarkan 5 tahapan tur fasilitas pabrik dengan video interaktif & diagram cetak biru.</p>'
       + subnav
       + '<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-red btn-sm" id="addtour">' + ic('plus') + ' Tambah Tahap Tur</button></div>'
-      + T.map((t, i) => '<div class="adm-row"><div><b>' + esc(t.n) + '. ' + esc(L(t.name)) + '</b> ' + (t.jp ? '<span class="mini">[' + esc(t.jp) + ']</span> ' : '') + '<span class="mini">— ' + esc(L(t.d)).slice(0, 70) + '…</span></div><div style="display:flex;gap:8px"><button class="btn btn-line btn-sm" data-pe-tour="' + i + '">' + ic('edit') + ' Edit</button><button class="btn btn-sm" style="color:var(--red);border:1.5px solid var(--red);border-radius:9px;padding:8px 12px" data-pd-tour="' + i + '">' + ic('trash') + '</button></div></div>').join('')
+      + T.map((t, i) => '<div class="adm-row"><div><b>' + esc(t.n) + '. ' + esc(L(t.name)) + '</b> ' + (t.jp ? '<span class="mini">[' + esc(t.jp) + ']</span> ' : '') + (t.video ? '<span class="mini" style="background:#0e2350;color:#7ee2a8;font-weight:700;border-radius:6px;padding:3px 8px;margin-left:6px;display:inline-flex;align-items:center;gap:4px">' + ic('play') + ' Video</span> ' : '') + '<span class="mini">— ' + esc(L(t.d)).slice(0, 60) + '…</span></div><div style="display:flex;gap:8px"><button class="btn btn-line btn-sm" data-pe-tour="' + i + '">' + ic('edit') + ' Edit</button><button class="btn btn-sm" style="color:var(--red);border:1.5px solid var(--red);border-radius:9px;padding:8px 12px" data-pd-tour="' + i + '">' + ic('trash') + '</button></div></div>').join('')
       + '<div id="toured"></div>';
   }
 
@@ -434,8 +434,9 @@ export function aFactoryQuality(sub) {
 
 export function aTourForm(i) {
   const T = dTour() || [];
-  const t = i >= 0 ? T[i] : { n: '0' + (T.length + 1), jp: '', name: { en: '', id: '' }, d: { en: '', id: '' }, data: [] };
+  const t = i >= 0 ? T[i] : { n: '0' + (T.length + 1), jp: '', name: { en: '', id: '' }, d: { en: '', id: '' }, data: [], video: '' };
   const pairs = a => (a || []).map(r => r[0] + ' | ' + r[1]).join('\n');
+  const curVideo = (t.video || '').trim();
   return '<form id="tourform" class="form" style="margin-top:18px;border-top:2px solid var(--line);padding-top:18px">'
     + '<input type="hidden" name="i" value="' + i + '">'
     + fText('n', 'Nomor Tahap (mis. 01, 02)', t.n, 1)
@@ -443,6 +444,26 @@ export function aTourForm(i) {
     + fBi('name', 'Nama Tahap Tur', t.name)
     + fBiTa('d', 'Deskripsi Tahap', t.d)
     + fTa('data', 'Data Teknis / Matriks (Format per baris: Label | Nilai)', pairs(t.data))
+    + '<div class="f-full" style="background:var(--bg);border:1.5px solid var(--line);border-radius:12px;padding:18px;margin:12px 0">'
+    + '<label style="font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:8px;font-size:14px;color:var(--navy)">' + ic('play') + ' Video Footage Tahap Ini (MP4 / WebM / YouTube)</label>'
+    + '<p class="mini" style="margin-bottom:14px;color:var(--mut)">Unggah file video footage nyata fasilitas pabrik (.mp4, .webm hingga 100 MB) atau masukkan URL video / embed YouTube. Jika kosong, sistem otomatis menampilkan diagram Blueprint SVG.</p>'
+    + '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">'
+    + '<input type="file" id="tourvideofile" accept="video/mp4,video/webm,video/ogg,video/quicktime" style="font-size:13px;max-width:280px">'
+    + '<button type="button" class="btn btn-line btn-sm" id="btnuploadtourvideo">' + ic('download') + ' Unggah File Video</button>'
+    + '<span id="tourvideomsg" class="mini">Maksimal 100 MB</span>'
+    + '</div>'
+    + '<div style="display:flex;gap:10px;align-items:center">'
+    + '<input type="text" name="video" id="tourvideourl" value="' + esc(curVideo) + '" placeholder="/uploads/video.mp4 atau https://www.youtube.com/watch?v=..." style="flex:1;padding:9px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:13.5px">'
+    + (curVideo ? '<button type="button" class="btn btn-sm" style="color:var(--red);border:1.5px solid var(--red);border-radius:8px;padding:8px 12px" id="btndeltourvideo">' + ic('trash') + ' Hapus</button>' : '')
+    + '</div>'
+    + '<div id="tourvideoprev" style="margin-top:14px">'
+    + (curVideo ? (
+        curVideo.includes('youtube.com') || curVideo.includes('youtu.be')
+          ? '<iframe src="' + esc(curVideo) + '" style="width:100%;max-width:540px;height:290px;border-radius:10px;border:1px solid var(--line)"></iframe>'
+          : '<video controls playsinline style="width:100%;max-width:540px;max-height:290px;border-radius:10px;border:1px solid var(--line);background:#000;display:block"><source src="' + esc(curVideo) + '" type="video/mp4"><source src="' + esc(curVideo) + '" type="video/webm"></video>'
+      ) : '<div class="mini" style="color:var(--mut);background:#fff;padding:12px 14px;border-radius:8px;border:1px dashed var(--line)">ℹ Belum ada video untuk tahap ini. Default menampilkan Diagram Cetak Biru (Blueprint SVG).</div>')
+    + '</div>'
+    + '</div>'
     + '<div class="f-full" style="display:flex;gap:10px"><button class="btn btn-red">Simpan Tahap Tur</button><button type="button" class="btn btn-line" id="tourcancel">Batal</button></div></form>';
 }
 
@@ -896,6 +917,85 @@ export function mountAdmin(seg, router, goHash) {
         ed.innerHTML = aTourForm(i);
         ed.scrollIntoView({ behavior: 'smooth' });
         const f = qs('#tourform');
+        const upBtn = qs('#btnuploadtourvideo');
+        const fileIn = qs('#tourvideofile');
+        const upMsg = qs('#tourvideomsg');
+        const urlIn = qs('#tourvideourl');
+        const prevBox = qs('#tourvideoprev');
+        const delBtn = qs('#btndeltourvideo');
+
+        const updateTourVideoPreview = url => {
+          const v = (url || '').trim();
+          if (!v) {
+            prevBox.innerHTML = '<div class="mini" style="color:var(--mut);background:#fff;padding:12px 14px;border-radius:8px;border:1px dashed var(--line)">ℹ Belum ada video untuk tahap ini. Default menampilkan Diagram Cetak Biru (Blueprint SVG).</div>';
+            return;
+          }
+          const ytMatch = v.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+          if (ytMatch && ytMatch[1]) {
+            prevBox.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + ytMatch[1] + '" style="width:100%;max-width:540px;height:290px;border-radius:10px;border:1px solid var(--line)"></iframe>';
+          } else {
+            prevBox.innerHTML = '<video controls playsinline style="width:100%;max-width:540px;max-height:290px;border-radius:10px;border:1px solid var(--line);background:#000;display:block"><source src="' + v + '" type="video/mp4"><source src="' + v + '" type="video/webm"></video>';
+          }
+        };
+
+        if (urlIn) {
+          urlIn.oninput = () => updateTourVideoPreview(urlIn.value);
+        }
+
+        if (delBtn) {
+          delBtn.onclick = () => {
+            if (urlIn) urlIn.value = '';
+            updateTourVideoPreview('');
+            delBtn.style.display = 'none';
+            toast('Tautan video dibersihkan');
+          };
+        }
+
+        if (upBtn && fileIn) {
+          upBtn.onclick = async () => {
+            const file = fileIn.files[0];
+            if (!file) {
+              alert('Pilih file video terlebih dahulu');
+              return;
+            }
+            if (file.size > 100 * 1024 * 1024) {
+              alert('Ukuran video melebihi batas 100 MB');
+              return;
+            }
+            upBtn.disabled = true;
+            upMsg.textContent = 'Mengunggah video... mohon tunggu';
+            upMsg.style.color = 'var(--gold)';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+              const res = await authFetch('/api/upload', {
+                method: 'POST',
+                body: formData
+              });
+              const data = await res.json();
+              if (data.success && data.file && data.file.url) {
+                if (urlIn) urlIn.value = data.file.url;
+                upMsg.textContent = '✓ Video berhasil diunggah: ' + data.file.filename;
+                upMsg.style.color = '#10b981';
+                updateTourVideoPreview(data.file.url);
+                toast('Video berhasil diunggah ke server');
+              } else {
+                upMsg.textContent = 'Gagal upload: ' + (data.message || 'Error');
+                upMsg.style.color = 'var(--red)';
+                toast(data.message || 'Gagal upload video');
+              }
+            } catch (err) {
+              upMsg.textContent = 'Error jaringan saat upload video';
+              upMsg.style.color = 'var(--red)';
+              toast('Error jaringan saat upload video');
+            } finally {
+              upBtn.disabled = false;
+            }
+          };
+        }
+
         f.onsubmit = e => {
           e.preventDefault();
           const fd = {};
@@ -906,7 +1006,8 @@ export function mountAdmin(seg, router, goHash) {
             jp: (fd.jp || '').trim(),
             name: { en: fd.name_en, id: fd.name_id },
             d: { en: fd.d_en, id: fd.d_id },
-            data: parsePairs(fd.data)
+            data: parsePairs(fd.data),
+            video: (fd.video || '').trim()
           };
           if (i >= 0) T[i] = o;
           else T.push(o);
