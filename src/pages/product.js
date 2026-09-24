@@ -53,8 +53,10 @@ export function renderProduct(id) {
     + '<a class="pdlink r" href="#/product/' + esc(next.id) + '"><span><small>' + L({ en: 'Next', id: 'Berikutnya' }) + '</small><b>' + esc(next.name) + '</b></span>' + ic('arrow') + '</a></div>'
     + '</div><aside class="pd-side"><div class="side-card"><div class="side-b"><span class="cat">' + esc(L(p.cat)) + '</span><h3>' + esc(p.name) + '</h3>'
     + '<p class="tiny">' + L({ en: 'Every RFQ you send arrives with full technical data — our sales engineer can quote faster and more accurately.', id: 'Setiap RFQ yang Anda kirim masuk dengan data teknis lengkap — penawaran lebih cepat dan akurat.' }) + '</p>'
-    + '<a class="btn btn-red" style="width:100%;margin-top:12px" href="#/contact/rfq/' + esc(p.id) + '">' + ic('send') + ' ' + L({ en: 'Request quotation', id: 'Minta penawaran' }) + '</a>'
+    + '<div style="display:flex;flex-direction:column;gap:12px;margin-top:16px">'
+    + '<a class="btn btn-red" style="width:100%" href="#/contact/rfq/' + esc(p.id) + '">' + ic('send') + ' ' + L({ en: 'Request quotation', id: 'Minta penawaran' }) + '</a>'
     + '<a class="btn btn-line" style="width:100%" href="#/resources">' + ic('download') + ' ' + L({ en: 'Spec sheet (PDF)', id: 'Spec sheet (PDF)' }) + '</a>'
+    + '</div>'
     + '</div></div></aside></div></div></section>' + ctaBand();
 }
 
