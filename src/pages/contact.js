@@ -14,6 +14,11 @@ export function renderContact(tab) {
     ['product', { en: 'Product Inquiry', id: 'Pertanyaan Produk' }],
     ['corporate', { en: 'Corporate Inquiry', id: 'Pertanyaan Korporat' }]
   ];
+  const mapQuery = (co.mapQuery || co.addr || 'Kawasan Industri Jababeka II, Cikarang, Bekasi').trim();
+  const mapEmbedUrl = (co.mapEmbed || '').trim() || ('https://maps.google.com/maps?q=' + encodeURIComponent(mapQuery) + '&t=&z=14&ie=UTF8&iwloc=&output=embed');
+  const directMapsLink = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(mapQuery);
+  const mapLabel = co.mapLabel || 'Jababeka II — Cikarang, Bekasi';
+
   return '<section class="page-hero">' + crumbs(null, L({ en: 'Contact', id: 'Kontak' })) + '<div class="wrap"><h1>' + L({ en: 'Contact us', id: 'Hubungi kami' }) + '</h1><p class="lead">' + L({ en: 'Three separate channels so every lead reaches the right person inside Jidoka.', id: 'Tiga jalur terpisah agar setiap lead sampai ke pihak internal Jidoka yang tepat.' }) + '</p></div></section>'
     + '<section class="sec"><div class="wrap ct-grid"><div><div class="info-card">'
     + '<div class="ic-row">' + ic('mail') + '<div><b>' + L({ en: 'Sales (general & RFQ)', id: 'Sales (umum & RFQ)' }) + '</b><span>' + esc(co.sales) + '</span></div></div>'
@@ -21,7 +26,12 @@ export function renderContact(tab) {
     + '<div class="ic-row">' + ic('phone') + '<div><b>' + L({ en: 'Phone / WhatsApp', id: 'Telepon / WhatsApp'}) + '</b><span>' + esc(co.phone) + ' <small>[to be confirmed]</small></span></div></div>'
     + '<div class="ic-row">' + ic('pin') + '<div><b>' + L({ en: 'Factory & Office', id: 'Pabrik & Kantor' }) + '</b><span>' + esc(co.addr) + '</span></div></div>'
     + '<div class="ic-row">' + ic('clock') + '<div><b>' + L({ en: 'Response time', id: 'Waktu respons' }) + '</b><span>' + L({ en: 'Within 1 business day', id: 'Dalam 1 hari kerja' }) + '</span></div></div>'
-    + '<div style="border-top:1px solid var(--line)"><svg viewBox="0 0 400 180"><rect width="400" height="180" fill="#e8edf5"/><g stroke="#cdd6e4" stroke-width="3"><path d="M0 60h400M0 130h400M110 0v180M260 0v180"/></g><g stroke="#dfe6f0" stroke-width="2"><path d="M0 95h400M180 0v180M330 0v180M55 0v180"/></g><rect x="270" y="70" width="46" height="34" fill="#16336e" opacity=".25"/><rect x="130" y="100" width="34" height="26" fill="#16336e" opacity=".2"/><rect x="290" y="16" width="30" height="30" fill="#16336e" opacity=".2"/><text x="16" y="30" font-family="Barlow Condensed" font-size="13" fill="#5a6478" letter-spacing="2">JABABEKA II — CIKARANG, BEKASI</text><g transform="translate(200,84)"><path d="M0-22a15 15 0 0 1 15 15c0 11-15 29-15 29S-15 4-15-7A15 15 0 0 1 0-22z" fill="#d71920"/><circle r="5.5" cy="-7" fill="#fff"/></g></svg></div></div></div>'
+    + '<div class="info-map-wrap">'
+    + '<iframe title="' + esc(L({ en: 'Factory & Office Location Map', id: 'Peta Lokasi Pabrik & Kantor' })) + '" src="' + esc(mapEmbedUrl) + '" width="100%" height="230" style="border:0;display:block" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>'
+    + '<div class="info-map-bar">'
+    + '<span class="info-map-label">' + ic('pin') + ' ' + esc(mapLabel) + '</span>'
+    + '<a href="' + esc(directMapsLink) + '" target="_blank" rel="noopener noreferrer" class="info-map-btn">' + L({ en: 'Open in Google Maps', id: 'Buka di Google Maps' }) + ' ↗</a>'
+    + '</div></div></div></div>'
     + '<div><div class="tabs">' + tabs.map(t => '<button class="tab ' + (tab === t[0] ? 'on' : '') + '" data-t="' + t[0] + '">' + L(t[1]) + '</button>').join('') + '</div><div id="formzone"></div></div></div></section>';
 }
 

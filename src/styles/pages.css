@@ -281,6 +281,13 @@ footer ul a:hover{color:#fff}
 .ic-row .ic{width:18px;height:18px;color:var(--red);flex:none;margin-top:3px}
 .ic-row b{display:block;color:var(--navy);font-size:14.5px}
 .ic-row span{font-size:13.5px;color:var(--mut);line-height:1.55}
+.info-map-wrap{position:relative;border-top:1px solid var(--line);background:#e8edf5}
+.info-map-wrap iframe{width:100%;height:230px;border:0;display:block}
+.info-map-bar{display:flex;align-items:center;justify-content:space-between;padding:11px 18px;background:#f8fafc;border-top:1px solid var(--line);gap:10px;flex-wrap:wrap}
+.info-map-label{font:600 12.5px 'Barlow';color:var(--navy);display:inline-flex;align-items:center;gap:6px}
+.info-map-label .ic{color:var(--red);width:15px;height:15px}
+.info-map-btn{font:700 11.5px 'Barlow';letter-spacing:.04em;text-transform:uppercase;color:var(--red);text-decoration:none;display:inline-flex;align-items:center;gap:4px;transition:color .2s}
+.info-map-btn:hover{color:var(--navy);text-decoration:underline}
 .tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
 .tab{padding:11px 18px;border-radius:999px;border:1.5px solid var(--line);font:700 12px 'Barlow';letter-spacing:.04em;color:var(--mut);background:#fff;text-transform:uppercase}
 .tab.on{background:var(--red);border-color:var(--red);color:#fff}

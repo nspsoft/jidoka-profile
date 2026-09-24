@@ -332,6 +332,10 @@ export function aCompany() {
     + '<div class="f f-full"><label>URL Video Hero Beranda (mp4)</label><input name="video" value="' + esc(co.video || '') + '" placeholder="factory.mp4 atau https://…/video.mp4 — pisahkan beberapa URL dengan koma">'
     + '<span class="mini" style="display:block;margin-top:6px;line-height:1.6">Letakkan file video bernama <b>factory.mp4</b> di folder yang sama dengan index.html, atau tempel URL video online (.mp4). Jika video gagal dimuat, otomatis tampil background animasi blueprint.</span></div>'
     + fTa('addr', 'Alamat Pabrik & Kantor', co.addr)
+    + fText('mapLabel', 'Label Lokasi Peta', co.mapLabel || 'Jababeka II — Cikarang, Bekasi')
+    + fText('mapQuery', 'Keyword / Alamat Google Maps (otomatis geocoding)', co.mapQuery || co.addr || '')
+    + '<div class="f f-full"><label>Custom Google Maps Embed URL (opsional)</label><input name="mapEmbed" value="' + esc(co.mapEmbed || '') + '" placeholder="https://maps.google.com/maps?q=...&output=embed">'
+    + '<span class="mini" style="display:block;margin-top:4px;color:var(--mut)">Kosongkan untuk otomatis menggunakan pencarian alamat di atas. Peta interaktif langsung aktif di halaman Kontak website.</span></div>'
     + '<div class="f"><label>Password Baru (opsional)</label><input name="npw" type="password" placeholder="Kosongkan jika tidak diganti"></div>'
     + '<div class="f" style="display:flex;align-items:flex-end"><button class="btn btn-red">Simpan</button></div></form>';
 }
@@ -1638,7 +1642,10 @@ export function mountAdmin(seg, router, goHash) {
           corp: fd.corp,
           addr: fd.addr,
           hours: fd.hours,
-          video: (fd.video || '').trim()
+          video: (fd.video || '').trim(),
+          mapLabel: (fd.mapLabel || '').trim(),
+          mapQuery: (fd.mapQuery || '').trim(),
+          mapEmbed: (fd.mapEmbed || '').trim()
         });
         if (fd.npw) {
           try {
