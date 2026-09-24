@@ -3,6 +3,7 @@ import { setLang } from '../i18n.js';
 import { renderHeader } from './header.js';
 import { renderMobileMenu, closeMM } from './mobilemenu.js';
 import { renderFooter } from './footer.js';
+import { renderWhatsAppFloat } from '../components/whatsappFloat.js';
 
 let rerouteHandler = null;
 let syncHdrHandler = null;
@@ -26,6 +27,11 @@ export function buildChrome() {
 
   const ftr = qs('#ftr');
   if (ftr) ftr.innerHTML = renderFooter();
+
+  const waroot = qs('#wa-root');
+  if (waroot) {
+    waroot.innerHTML = (raw === 'admin') ? '' : renderWhatsAppFloat();
+  }
 
   qa('#hdr .burger').forEach(b => {
     b.onclick = () => {

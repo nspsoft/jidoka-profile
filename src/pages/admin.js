@@ -325,7 +325,9 @@ export function aCompany() {
   const co = dCo();
   return '<h3>Kontak & Akses</h3><p class="tiny">Kelola kontak kantor/pabrik, email sales/investor, jam kerja, video hero beranda, dan password login admin.</p>'
     + '<form id="coform" class="form" style="margin-top:14px">'
-    + fText('phone', 'Telepon / WhatsApp', co.phone, 1)
+    + fText('phone', 'Telepon Kantor', co.phone, 1)
+    + fText('wa', 'Nomor WhatsApp Sales (Floating Button)', co.wa || co.phone || '', 1)
+    + fText('waMsg', 'Pesan Awal WhatsApp (opsional)', co.waMsg || '')
     + fText('hours', 'Jam Operasional', co.hours, 1)
     + fText('sales', 'Email Sales (RFQ & inquiry umum)', co.sales, 1)
     + fText('corp', 'Email Corporate Development (investor)', co.corp, 1)
@@ -1638,6 +1640,8 @@ export function mountAdmin(seg, router, goHash) {
         DB.set('company', {
           ...curCo,
           phone: fd.phone,
+          wa: (fd.wa || '').trim(),
+          waMsg: (fd.waMsg || '').trim(),
           sales: fd.sales,
           corp: fd.corp,
           addr: fd.addr,
