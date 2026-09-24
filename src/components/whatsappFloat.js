@@ -23,9 +23,8 @@ export function renderWhatsAppFloat() {
   });
 
   return '<aside class="wa-float-container" id="wafloat" aria-label="WhatsApp Support">'
-    + '<a href="' + esc(waUrl) + '" target="_blank" rel="noopener noreferrer" class="wa-float-btn" aria-label="' + esc(tooltipText) + '">'
+    + '<a href="' + esc(waUrl) + '" target="_blank" rel="noopener noreferrer" class="wa-float-btn" title="' + esc(tooltipText) + '" aria-label="' + esc(tooltipText) + '">'
     + '<span class="wa-float-pulse"></span>'
     + '<span class="wa-float-icon">' + ic('wa') + '</span>'
-    + '<span class="wa-float-pill">' + esc(tooltipText) + '</span>'
     + '</a></aside>';
 }
