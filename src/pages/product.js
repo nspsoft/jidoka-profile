@@ -2,7 +2,6 @@ import { dP } from '../data/db.js';
 import { crumbs } from '../components/crumbs.js';
 import { ctaBand } from '../components/ctaBand.js';
 import { ic } from '../components/icons.js';
-import { art } from '../components/productArt.js';
 import { esc, qs, qa } from '../components/dom.js';
 import { L } from '../i18n.js';
 import { renderProducts } from './products.js';
@@ -20,7 +19,6 @@ function renderProductShowcase(p) {
     + '<div class="pd-media-switch" id="pdswitch">'
     + (hasPhotos ? '<button type="button" class="' + (defaultMode === 'photo' ? 'on' : '') + '" data-view="photo">' + ic('eye') + ' ' + L({ en: 'Photos (' + images.length + ')', id: 'Foto Produk (' + images.length + ')' }) + '</button>' : '')
     + '<button type="button" class="' + (defaultMode === '3d' ? 'on' : '') + '" data-view="3d">' + ic('box') + ' ' + L({ en: '3D Interactive 360°', id: '3D Interaktif 360°' }) + '</button>'
-    + '<button type="button" data-view="blueprint">' + ic('gear') + ' ' + L({ en: 'Blueprint', id: 'Diagram Cetak Biru' }) + '</button>'
     + '</div>'
     + '<span class="pd-showcase-pill">' + esc(p.name) + '</span>'
     + '</div>'
@@ -100,10 +98,6 @@ export function mountProduct(id) {
           productName: p.name
         });
       }
-    } else if (view === 'blueprint') {
-      stage.innerHTML = '<div class="pd-stage-art">' + art(p.art, p.name + ' — ' + L(p.cat)) + '</div>';
-      const thEl = qs('#pdthumbs');
-      if (thEl) thEl.style.display = 'none';
     }
   };
 
