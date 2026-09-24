@@ -4,7 +4,7 @@ import { closeMM } from './layout/mobilemenu.js';
 
 import { renderHome, mountHome } from './pages/home.js';
 import { renderProducts, mountProducts } from './pages/products.js';
-import { renderProduct } from './pages/product.js';
+import { renderProduct, mountProduct } from './pages/product.js';
 import { renderApplication } from './pages/application.js';
 import { renderManufacturing, mountManufacturing } from './pages/manufacturing.js';
 import { renderQuality } from './pages/quality.js';
@@ -143,6 +143,7 @@ function mount(page, seg) {
 
     if (page === 'home') mountHome();
     if (page === 'products') mountProducts();
+    if (page === 'product') mountProduct(seg[1]);
     if (page === 'manufacturing') mountManufacturing();
     if (page === 'partnership') mountPartnership();
     if (page === 'contact') mountContact(seg);

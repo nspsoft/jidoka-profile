@@ -85,16 +85,48 @@ export function aProducts() {
 
 export function aProdForm(i) {
   const P = dP();
-  const p = i >= 0 ? P[i] : { id: '', art: 'box', cat: { en: '', id: '' }, name: '', lead: { en: '', id: '' }, material: '', spec: [], mfg: [], apps: [], quality: [] };
+  const p = i >= 0 ? P[i] : { id: '', art: 'box', cat: { en: '', id: '' }, name: '', lead: { en: '', id: '' }, material: '', spec: [], mfg: [], apps: [], quality: [], images: [], model3d: '' };
   const pairs = a => (a || []).map(r => r[0] + ' | ' + r[1]).join('\n');
+  const pImages = Array.isArray(p.images) ? p.images : [];
+  const pModel3d = p.model3d || '';
+
   return '<form id="pform" class="form" style="margin-top:18px;border-top:2px solid var(--line);padding-top:18px">'
     + '<input type="hidden" name="i" value="' + i + '">'
+    + '<input type="hidden" name="images_json" id="pimagesjson" value="' + esc(JSON.stringify(pImages)) + '">'
     + fText('name', 'Nama Produk', p.name, 1)
     + fText('iden', 'Slug URL (huruf kecil, tanpa spasi)', p.id, 1)
-    + fSel('art', 'Ilustrasi', ['roll', 'box', 'part', 'sheet', 'cust'], p.art)
+    + fSel('art', 'Ilustrasi / Model 3D Bawaan', ['box', 'part', 'roll', 'sheet', 'cust'], p.art)
     + fBi('cat', 'Kategori', p.cat)
     + fBiTa('lead', 'Deskripsi Singkat', p.lead)
     + fText('material', 'Material', p.material)
+
+    // Multi-photo gallery section
+    + '<div class="f-full" style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;margin:8px 0">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">'
+    + '<div><b style="display:flex;align-items:center;gap:6px">' + ic('check') + ' Galeri Multi-Foto Produk</b>'
+    + '<p class="mini" style="margin:2px 0 0;color:var(--mut)">Unggah foto produk asli (bisa pilih banyak sekaligus). Foto pertama otomatis menjadi foto utama (cover).</p></div>'
+    + '<div style="display:flex;gap:8px;align-items:center">'
+    + '<input type="file" id="pimagesfile" accept="image/*" multiple style="display:none">'
+    + '<button type="button" class="btn btn-line btn-sm" id="btnpickpimages">' + ic('plus') + ' Pilih & Unggah Foto</button>'
+    + '</div></div>'
+    + '<div id="pimagesmsg" class="mini" style="margin-bottom:8px"></div>'
+    + '<div id="pimagesgrid" class="adm-photogrid"></div>'
+    + '</div>'
+
+    // 3D Model file section
+    + '<div class="f-full" style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;margin:8px 0">'
+    + '<div style="margin-bottom:10px">'
+    + '<b style="display:flex;align-items:center;gap:6px">🧊 File Model 3D Kustom (.glb / .gltf)</b>'
+    + '<p class="mini" style="margin:2px 0 0;color:var(--mut)">Opsional. Jika dikosongkan, website otomatis menggunakan 3D Canvas interaktif 360° bawaan sesuai jenis Ilustrasi di atas.</p>'
+    + '</div>'
+    + '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">'
+    + '<input type="text" name="model3d" id="pmodel3durl" value="' + esc(pModel3d) + '" placeholder="URL file .glb (mis. /uploads/box.glb)" style="flex:1;min-width:260px">'
+    + '<input type="file" id="pmodel3dfile" accept=".glb,.gltf" style="display:none">'
+    + '<button type="button" class="btn btn-line btn-sm" id="btnpickpmodel3d">Unggah File .glb</button>'
+    + '</div>'
+    + '<div id="pmodel3dmsg" class="mini" style="margin-top:6px"></div>'
+    + '</div>'
+
     + fTa('spec', 'Spesifikasi — satu per baris, format: Label | Nilai', pairs(p.spec))
     + fTa('mfg', 'Kapabilitas Manufaktur — format: Label | Nilai', pairs(p.mfg))
     + fTa('apps', 'Aplikasi — satu per baris', (p.apps || []).join('\n'))
@@ -107,6 +139,12 @@ export function saveProd(fd) {
   const i = +fd.i;
   let id = (fd.iden || '').trim() || slug(fd.name);
   if (i < 0 && P.some(p => p.id === id)) id = id + '-' + (P.length + 1);
+  let imgs = [];
+  try {
+    imgs = JSON.parse(fd.images_json || '[]');
+  } catch (e) {
+    imgs = [];
+  }
   const o = {
     id: id,
     art: fd.art,
@@ -114,6 +152,8 @@ export function saveProd(fd) {
     cat: { en: fd.cat_en || fd.cat_id, id: fd.cat_id || fd.cat_en },
     lead: { en: fd.lead_en, id: fd.lead_id },
     material: fd.material,
+    images: Array.isArray(imgs) ? imgs : [],
+    model3d: (fd.model3d || '').trim(),
     spec: parsePairs(fd.spec),
     mfg: parsePairs(fd.mfg),
     apps: lines(fd.apps),
@@ -883,6 +923,159 @@ export function mountAdmin(seg, router, goHash) {
     const open = i => {
       ped.innerHTML = aProdForm(i);
       ped.scrollIntoView({ behavior: 'smooth' });
+
+      const P = dP();
+      const p = i >= 0 ? P[i] : null;
+      let curImages = p && Array.isArray(p.images) ? [...p.images] : [];
+
+      const gridEl = qs('#pimagesgrid');
+      const jsonIn = qs('#pimagesjson');
+      const fileIn = qs('#pimagesfile');
+      const pickBtn = qs('#btnpickpimages');
+      const msgEl = qs('#pimagesmsg');
+
+      const renderGrid = () => {
+        if (jsonIn) jsonIn.value = JSON.stringify(curImages);
+        if (!gridEl) return;
+        if (!curImages.length) {
+          gridEl.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:24px;background:var(--card-bg, #f8fafc);border:1px dashed var(--line);border-radius:10px;color:var(--mut)" class="mini">📷 Belum ada foto yang diunggah. Klik tombol "Pilih & Unggah Foto" di atas.</div>';
+          return;
+        }
+        gridEl.innerHTML = curImages.map((src, idx) => {
+          return '<div class="adm-photoitem">'
+            + '<img src="' + esc(src) + '" alt="Foto ' + (idx + 1) + '">'
+            + (idx === 0 ? '<div class="adm-cover-tag">Foto Utama</div>' : '')
+            + '<div class="adm-photo-acts">'
+            + (idx > 0 ? '<button type="button" class="adm-photo-btn" data-pimg-cover="' + idx + '" title="Jadikan Foto Utama">⭐ Cover</button>' : '')
+            + '<button type="button" class="adm-photo-btn adm-photo-del" data-pimg-del="' + idx + '" title="Hapus foto">🗑 Hapus</button>'
+            + '</div>'
+            + '</div>';
+        }).join('');
+
+        qa('[data-pimg-cover]', gridEl).forEach(btn => {
+          btn.onclick = () => {
+            const idx = +btn.dataset.pimgCover;
+            const [item] = curImages.splice(idx, 1);
+            curImages.unshift(item);
+            renderGrid();
+            toast('Foto utama diperbarui');
+          };
+        });
+
+        qa('[data-pimg-del]', gridEl).forEach(btn => {
+          btn.onclick = () => {
+            const idx = +btn.dataset.pimgDel;
+            curImages.splice(idx, 1);
+            renderGrid();
+            toast('Foto dihapus');
+          };
+        });
+      };
+
+      renderGrid();
+
+      if (pickBtn && fileIn) {
+        pickBtn.onclick = () => fileIn.click();
+        fileIn.onchange = async () => {
+          const files = Array.from(fileIn.files || []);
+          if (!files.length) return;
+          pickBtn.disabled = true;
+          if (msgEl) {
+            msgEl.style.color = 'var(--gold, #d97706)';
+            msgEl.textContent = `Mengunggah ${files.length} foto... mohon tunggu`;
+          }
+
+          let uploadedCount = 0;
+          for (const file of files) {
+            if (file.size > 25 * 1024 * 1024) {
+              alert(`File ${file.name} melebihi batas 25 MB`);
+              continue;
+            }
+            const fd = new FormData();
+            fd.append('file', file);
+            try {
+              const res = await authFetch('/api/upload', {
+                method: 'POST',
+                body: fd
+              });
+              if (res.ok) {
+                const data = await res.json();
+                const url = (data.file && data.file.url) || data.url;
+                if (url) {
+                  curImages.push(url);
+                  uploadedCount++;
+                }
+              }
+            } catch (err) {
+              console.error('Upload error:', err);
+            }
+          }
+
+          fileIn.value = '';
+          pickBtn.disabled = false;
+          if (msgEl) {
+            msgEl.style.color = 'var(--grn, #16a34a)';
+            msgEl.textContent = `✓ Berhasil mengunggah ${uploadedCount} foto.`;
+            setTimeout(() => { if (msgEl) msgEl.textContent = ''; }, 4000);
+          }
+          renderGrid();
+        };
+      }
+
+      // 3D Model file upload
+      const m3dFile = qs('#pmodel3dfile');
+      const m3dBtn = qs('#btnpickpmodel3d');
+      const m3dUrl = qs('#pmodel3durl');
+      const m3dMsg = qs('#pmodel3dmsg');
+
+      if (m3dBtn && m3dFile) {
+        m3dBtn.onclick = () => m3dFile.click();
+        m3dFile.onchange = async () => {
+          const file = m3dFile.files[0];
+          if (!file) return;
+          if (file.size > 50 * 1024 * 1024) {
+            alert('Ukuran file 3D melebihi 50 MB');
+            return;
+          }
+          m3dBtn.disabled = true;
+          if (m3dMsg) {
+            m3dMsg.style.color = 'var(--gold, #d97706)';
+            m3dMsg.textContent = 'Mengunggah file 3D (.glb)...';
+          }
+          const fd = new FormData();
+          fd.append('file', file);
+          try {
+            const res = await authFetch('/api/upload', {
+              method: 'POST',
+              body: fd
+            });
+            if (res.ok) {
+              const data = await res.json();
+              const url = (data.file && data.file.url) || data.url;
+              if (url) {
+                if (m3dUrl) m3dUrl.value = url;
+                if (m3dMsg) {
+                  m3dMsg.style.color = 'var(--grn, #16a34a)';
+                  m3dMsg.textContent = '✓ File 3D berhasil diunggah!';
+                }
+              }
+            } else {
+              if (m3dMsg) {
+                m3dMsg.style.color = 'var(--red, #dc2626)';
+                m3dMsg.textContent = 'Gagal mengunggah file 3D';
+              }
+            }
+          } catch (e) {
+            if (m3dMsg) {
+              m3dMsg.style.color = 'var(--red, #dc2626)';
+              m3dMsg.textContent = 'Error: ' + e.message;
+            }
+          }
+          m3dBtn.disabled = false;
+          m3dFile.value = '';
+        };
+      }
+
       const f = qs('#pform');
       f.onsubmit = e => {
         e.preventDefault();
