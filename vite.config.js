@@ -26,5 +26,8 @@ export default defineConfig({
         changeOrigin: true
       }
     }
+  },
+  build: {
+    emptyOutDir: false
   }
 });
