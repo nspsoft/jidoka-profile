@@ -10,15 +10,15 @@ export function renderHome() {
   const vids = String(co.video || '').split(',').map(s => s.trim()).filter(Boolean);
   const heroLight = Math.max(10, Math.min(100, Number(co.heroLight !== undefined ? co.heroLight : 50)));
   const shadeOpacity = Math.max(0.08, Math.min(0.98, 1.05 - (heroLight / 100) * 0.90)).toFixed(2);
-  const videoOpacity = Math.max(0.20, Math.min(1.0, 0.25 + (heroLight / 100) * 0.70)).toFixed(2);
   const videoBrightness = (0.75 + (heroLight / 100) * 0.50).toFixed(2);
   const fallbackOpacity = Math.max(0.15, Math.min(0.85, 0.20 + (heroLight / 100) * 0.60)).toFixed(2);
 
   return '<section class="hero-v" id="herov">'
     + '<style>'
     + '#herov .hv-shade{opacity:' + shadeOpacity + '}'
-    + '#herov .hv-media.playing video{opacity:' + videoOpacity + ';filter:brightness(' + videoBrightness + ')}'
-    + '#herov .hv-fallback{opacity:' + fallbackOpacity + '}'
+    + '#herov .hv-media.playing video{opacity:1;filter:brightness(' + videoBrightness + ')}'
+    + '#herov .hv-media.playing .hv-fallback{opacity:0!important;visibility:hidden!important;display:none!important}'
+    + '#herov .hv-media:not(.playing) .hv-fallback{opacity:' + fallbackOpacity + '}'
     + '</style>'
     + '<div class="hv-media" id="hvm">'
     + '<div class="hv-fallback">' + blueprint() + '</div>'
@@ -53,13 +53,26 @@ export function renderHome() {
 }
 
 export function mountHome() {
-  const media = qs('#hvm'), v = qs('#hv');
+  const media = qs('#hvm'), v = qs('#hv'), fb = qs('#hvm .hv-fallback');
   if (media && v) {
-    const ok = () => { media.classList.add('playing'); };
-    const fail = () => { if (v.parentNode) v.parentNode.removeChild(v); };
+    const ok = () => {
+      media.classList.add('playing');
+      if (fb) {
+        fb.style.opacity = '0';
+        fb.style.display = 'none';
+      }
+    };
+    const fail = () => {
+      if (v.parentNode) v.parentNode.removeChild(v);
+      media.classList.remove('playing');
+      if (fb) {
+        fb.style.display = 'flex';
+      }
+    };
     if (v.readyState >= 2) ok();
     else {
       v.addEventListener('canplay', ok);
+      v.addEventListener('playing', ok);
       v.addEventListener('error', fail);
     }
     try {

@@ -355,8 +355,8 @@ export function fHeroLight(curVal, videoUrl) {
     + '<span id="heroprevbadge" style="background:#0e2350;border:1px solid rgba(255,255,255,.15);color:#7ee2a8;font:700 11px \'Barlow\';padding:3px 10px;border-radius:4px">Cahaya: ' + val + '%</span>'
     + '</div>'
     + '<div class="hero-live-preview" id="herolivepreview" style="position:relative;height:210px;border-radius:12px;overflow:hidden;background:#0a1626;border:1.5px solid var(--line);box-shadow:inset 0 0 40px rgba(0,0,0,.6)">'
-    + '<div id="heroprevfallback" style="position:absolute;inset:0;opacity:' + fallbackOpacity + ';transition:opacity .2s;display:flex;align-items:center;justify-content:center;overflow:hidden;pointer-events:none"><style>#heroprevfallback svg{width:100%;height:100%;object-fit:cover;display:block}</style>' + blueprint() + '</div>'
-    + (vids.length ? '<video id="heroprevmedia" muted loop playsinline autoplay style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:' + videoOpacity + ';filter:brightness(' + videoBrightness + ');transition:opacity .2s,filter .2s"><source src="' + esc(vids[0]) + '" type="video/mp4"></video>' : '')
+    + '<div id="heroprevfallback" style="position:absolute;inset:0;opacity:' + fallbackOpacity + ';transition:opacity .2s;display:' + (vids.length ? 'none' : 'flex') + ';align-items:center;justify-content:center;overflow:hidden;pointer-events:none"><style>#heroprevfallback svg{width:100%;height:100%;object-fit:cover;display:block}</style>' + blueprint() + '</div>'
+    + (vids.length ? '<video id="heroprevmedia" muted loop playsinline autoplay style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:1;filter:brightness(' + videoBrightness + ');transition:filter .2s"><source src="' + esc(vids[0]) + '" type="video/mp4"></video>' : '')
     + '<div id="heroprevshade" style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,16,32,.74),rgba(8,16,32,.32) 45%,rgba(8,16,32,.9));opacity:' + shadeOpacity + ';transition:opacity .2s;pointer-events:none"></div>'
     + '<div style="position:relative;z-index:3;padding:16px 20px;height:100%;display:flex;flex-direction:column;justify-content:space-between;color:#fff;pointer-events:none">'
     + '<div><div style="font:600 9px \'Barlow\';letter-spacing:.25em;text-transform:uppercase;color:#eef2f8;text-shadow:0 1px 4px rgba(0,0,0,.8)">PT JIDOKA RESULT INDONESIA — INDUSTRIAL PACKAGING SOLUTIONS</div>'
@@ -781,10 +781,18 @@ function initHeroLightControls(container) {
 
     if (prevShade) prevShade.style.opacity = shadeOpacity;
     if (prevMedia) {
-      prevMedia.style.opacity = videoOpacity;
+      prevMedia.style.opacity = '1';
       prevMedia.style.filter = 'brightness(' + videoBrightness + ')';
     }
-    if (prevFallback) prevFallback.style.opacity = fallbackOpacity;
+    if (prevFallback) {
+      if (prevMedia && prevMedia.style.display !== 'none') {
+        prevFallback.style.opacity = '0';
+        prevFallback.style.display = 'none';
+      } else {
+        prevFallback.style.opacity = fallbackOpacity;
+        prevFallback.style.display = 'flex';
+      }
+    }
   };
 
   range.oninput = updateVisuals;
