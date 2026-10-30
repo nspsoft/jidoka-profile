@@ -338,7 +338,7 @@ export function aCompany() {
     + fText('mapQuery', 'Keyword / Alamat Google Maps (otomatis geocoding)', co.mapQuery || co.addr || '')
     + '<div class="f f-full"><label>Custom Google Maps Embed URL (opsional)</label><input name="mapEmbed" value="' + esc(co.mapEmbed || '') + '" placeholder="https://maps.google.com/maps?q=...&output=embed">'
     + '<span class="mini" style="display:block;margin-top:4px;color:var(--mut)">Kosongkan untuk otomatis menggunakan pencarian alamat di atas. Peta interaktif langsung aktif di halaman Kontak website.</span></div>'
-    + '<div class="f"><label>Password Baru (opsional)</label><input name="npw" type="password" placeholder="Kosongkan jika tidak diganti"></div>'
+    + '<div class="f"><label>Password Baru (opsional)</label><div class="pw-wrap"><input name="npw" id="npw" type="password" placeholder="Kosongkan jika tidak diganti"><button type="button" class="pw-toggle" data-pw-target="npw" aria-label="Lihat / Sembunyikan Password" tabindex="-1">' + ic('eye') + '</button></div></div>'
     + '<div class="f" style="display:flex;align-items:flex-end"><button class="btn btn-red">Simpan</button></div></form>';
 }
 
@@ -627,7 +627,7 @@ export function renderAdmin(tab, sub) {
       + '<p class="tiny" style="margin:6px 0 16px">Autentikasi akun admin server (PRD §5, §6 M2).<br>Default: <b>admin@jidoka.co.id</b> / <b>jidoka2026</b></p>'
       + '<form id="lform" class="form" style="grid-template-columns:1fr">'
       + '<div class="f"><label>Email</label><input name="email" type="email" value="admin@jidoka.co.id" required></div>'
-      + '<div class="f"><label>Password</label><input name="pw" type="password" required><div class="err" id="lerr">Email atau password salah</div></div>'
+      + '<div class="f"><label>Password</label><div class="pw-wrap"><input name="pw" id="lpw" type="password" required autocomplete="current-password"><button type="button" class="pw-toggle" id="lpwtoggle" aria-label="Lihat / Sembunyikan Password" tabindex="-1">' + ic('eye') + '</button></div><div class="err" id="lerr">Email atau password salah</div></div>'
       + '<button class="btn btn-red" style="width:100%">Masuk</button></form></div></div></section>';
   }
   tab = tab || 'dash';
@@ -673,6 +673,16 @@ export function mountAdmin(seg, router, goHash) {
   if (!isLogged()) {
     const lf = qs('#lform');
     if (lf) {
+      const toggle = qs('#lpwtoggle');
+      const pwInput = qs('#lpw');
+      if (toggle && pwInput) {
+        toggle.onclick = () => {
+          const isPw = pwInput.type === 'password';
+          pwInput.type = isPw ? 'text' : 'password';
+          toggle.innerHTML = isPw ? ic('eyeOff') : ic('eye');
+          toggle.setAttribute('aria-label', isPw ? 'Sembunyikan password' : 'Lihat password');
+        };
+      }
       lf.onsubmit = async e => {
         e.preventDefault();
         const email = (lf.email && lf.email.value) || '';
@@ -1630,6 +1640,17 @@ export function mountAdmin(seg, router, goHash) {
   }
 
   if (T === 'company') {
+    qa('[data-pw-target]').forEach(btn => {
+      btn.onclick = () => {
+        const inp = qs('#' + btn.dataset.pwTarget);
+        if (inp) {
+          const isPw = inp.type === 'password';
+          inp.type = isPw ? 'text' : 'password';
+          btn.innerHTML = isPw ? ic('eyeOff') : ic('eye');
+          btn.setAttribute('aria-label', isPw ? 'Sembunyikan password' : 'Lihat password');
+        }
+      };
+    });
     const f = qs('#coform');
     if (f) {
       f.onsubmit = async e => {
