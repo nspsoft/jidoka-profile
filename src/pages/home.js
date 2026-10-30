@@ -22,7 +22,7 @@ export function renderHome() {
     + '</style>'
     + '<div class="hv-media" id="hvm">'
     + '<div class="hv-fallback">' + blueprint() + '</div>'
-    + (vids.length ? '<video id="hv" muted loop playsinline preload="auto"' + (RM ? '' : ' autoplay') + '>' + vids.map(u => '<source src="' + esc(u) + '" type="video/mp4">').join('') + '</video>' : '')
+    + (vids.length ? '<video id="hv" muted loop playsinline preload="metadata"' + (RM ? '' : ' autoplay') + '>' + vids.map(u => '<source src="' + esc(u) + '" type="video/mp4">').join('') + '</video>' : '')
     + '<div class="hv-shade"></div></div>'
     + '<div class="hv-in"><div>'
     + '<div class="hv-kick">' + L({ en: 'PT Jidoka Result Indonesia — Industrial Packaging Solutions', id: 'PT Jidoka Result Indonesia — Solusi Kemasan Industri' }) + '</div>'
@@ -75,11 +75,18 @@ export function mountHome() {
       v.addEventListener('playing', ok);
       v.addEventListener('error', fail);
     }
-    try {
-      const p = v.play();
-      if (p && p.catch) p.catch(fail);
-    } catch (e) {
-      fail();
+    const startPlay = () => {
+      try {
+        const p = v.play();
+        if (p && p.catch) p.catch(fail);
+      } catch (e) {
+        fail();
+      }
+    };
+    if (typeof requestIdleCallback !== 'undefined') {
+      requestIdleCallback(startPlay, { timeout: 1000 });
+    } else {
+      setTimeout(startPlay, 100);
     }
     setTimeout(function () {
       if (!media.classList.contains('playing')) fail();
