@@ -4,6 +4,7 @@ import { esc, qs, qa, lines, parsePairs, slug } from '../components/dom.js';
 import { logo, ic } from '../components/icons.js';
 import { toast } from '../components/toast.js';
 import { fText, fTa, fBi, fBiTa, fSel } from '../components/forms.js';
+import { blueprint } from '../components/blueprint.js';
 import { L } from '../i18n.js';
 
 export { isLogged, doLogin, doLogout };
@@ -321,6 +322,70 @@ export function saveProfile(fd) {
   DB.set('company', updated);
 }
 
+export function fHeroLight(curVal, videoUrl) {
+  const val = Math.max(10, Math.min(100, Number(curVal !== undefined ? curVal : 50)));
+  const shadeOpacity = Math.max(0.08, Math.min(0.98, 1.05 - (val / 100) * 0.90)).toFixed(2);
+  const videoOpacity = Math.max(0.20, Math.min(1.0, 0.25 + (val / 100) * 0.70)).toFixed(2);
+  const videoBrightness = (0.75 + (val / 100) * 0.50).toFixed(2);
+  const fallbackOpacity = Math.max(0.15, Math.min(0.85, 0.20 + (val / 100) * 0.60)).toFixed(2);
+
+  const getLabel = v => {
+    if (v < 35) return '🌙 Redup / Gelap';
+    if (v < 65) return '⚖️ Normal / Seimbang (Default)';
+    if (v < 85) return '☀️ Terang';
+    return '✨ Sangat Terang / Maksimal';
+  };
+
+  const vids = String(videoUrl || 'factory.mp4').split(',').map(s => s.trim()).filter(Boolean);
+
+  return '<div class="f f-full" style="background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:18px;margin:8px 0">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:10px">'
+    + '<div><label style="margin:0;font-size:13.5px;color:var(--navy);font-weight:700;display:flex;align-items:center;gap:7px">' + ic('gauge') + ' Intensitas Cahaya Background Hero Beranda</label>'
+    + '<p class="mini" style="margin:4px 0 0;color:var(--mut)">Atur tingkat kecerahan video pabrik & ilustrasi background pada banner utama Beranda. Geser slider untuk melihat perubahan live preview.</p></div>'
+    + '<div style="background:var(--bg);border:1px solid var(--line);padding:6px 14px;border-radius:999px;font:700 13px \'Barlow\';color:var(--navy);display:flex;align-items:center;gap:6px">'
+    + '<span id="herolightval">' + val + '%</span>'
+    + '<span id="herolightlbl" class="mini" style="color:var(--mut);font-weight:600">(' + getLabel(val) + ')</span>'
+    + '</div>'
+    + '</div>'
+
+    // Live Interactive Preview Box
+    + '<div style="margin:14px 0 16px">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+    + '<span style="font:700 11px \'Barlow\';letter-spacing:.08em;text-transform:uppercase;color:var(--navy)">👁️ Live Preview Tampilan Hero Beranda:</span>'
+    + '<span id="heroprevbadge" style="background:#0e2350;border:1px solid rgba(255,255,255,.15);color:#7ee2a8;font:700 11px \'Barlow\';padding:3px 10px;border-radius:4px">Cahaya: ' + val + '%</span>'
+    + '</div>'
+    + '<div class="hero-live-preview" id="herolivepreview" style="position:relative;height:210px;border-radius:12px;overflow:hidden;background:#0a1626;border:1.5px solid var(--line);box-shadow:inset 0 0 40px rgba(0,0,0,.6)">'
+    + '<div id="heroprevfallback" style="position:absolute;inset:0;opacity:' + fallbackOpacity + ';transition:opacity .2s;display:flex;align-items:center;justify-content:center;overflow:hidden;pointer-events:none"><style>#heroprevfallback svg{width:100%;height:100%;object-fit:cover;display:block}</style>' + blueprint() + '</div>'
+    + (vids.length ? '<video id="heroprevmedia" muted loop playsinline autoplay style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:' + videoOpacity + ';filter:brightness(' + videoBrightness + ');transition:opacity .2s,filter .2s"><source src="' + esc(vids[0]) + '" type="video/mp4"></video>' : '')
+    + '<div id="heroprevshade" style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,16,32,.74),rgba(8,16,32,.32) 45%,rgba(8,16,32,.9));opacity:' + shadeOpacity + ';transition:opacity .2s;pointer-events:none"></div>'
+    + '<div style="position:relative;z-index:3;padding:16px 20px;height:100%;display:flex;flex-direction:column;justify-content:space-between;color:#fff;pointer-events:none">'
+    + '<div><div style="font:600 9px \'Barlow\';letter-spacing:.25em;text-transform:uppercase;color:#eef2f8;text-shadow:0 1px 4px rgba(0,0,0,.8)">PT JIDOKA RESULT INDONESIA — INDUSTRIAL PACKAGING SOLUTIONS</div>'
+    + '<div style="font-family:\'Barlow Condensed\';font-size:26px;font-weight:700;line-height:1;text-transform:uppercase;margin-top:6px;text-shadow:0 2px 10px rgba(0,0,0,.85)">PACKAGE YOUR <span style="color:var(--red)">QUALITY.</span></div></div>'
+    + '<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px">'
+    + '<div style="font-size:10.5px;color:#e3e9f2;max-width:340px;line-height:1.4;text-shadow:0 1px 6px rgba(0,0,0,.85)">Karton box, imprabox, partisi, dan custom packaging untuk industri manufaktur & otomotif.</div>'
+    + '<div style="display:flex;gap:6px">'
+    + '<span style="background:var(--red);color:#fff;font:700 9px \'Barlow\';padding:4px 8px;border-radius:4px">MINTA PENAWARAN</span>'
+    + '<span style="border:1px solid rgba(255,255,255,.5);color:#fff;font:700 9px \'Barlow\';padding:4px 8px;border-radius:4px">FACTORY TOUR</span>'
+    + '</div></div></div>'
+    + '</div>'
+    + '</div>'
+
+    // Slider & Presets
+    + '<div style="margin:12px 0 10px">'
+    + '<input type="range" name="heroLight" id="herolightrange" min="10" max="100" step="5" value="' + val + '" style="width:100%;height:8px;border-radius:6px;accent-color:var(--red);cursor:pointer">'
+    + '</div>'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap">'
+    + '<button type="button" class="btn btn-line btn-sm" data-hl-set="25" style="padding:4px 10px;font-size:11.5px">🌙 25% Redup</button>'
+    + '<button type="button" class="btn btn-line btn-sm" data-hl-set="50" style="padding:4px 10px;font-size:11.5px">⚖️ 50% Standar</button>'
+    + '<button type="button" class="btn btn-line btn-sm" data-hl-set="75" style="padding:4px 10px;font-size:11.5px">☀️ 75% Terang</button>'
+    + '<button type="button" class="btn btn-line btn-sm" data-hl-set="95" style="padding:4px 10px;font-size:11.5px">✨ 95% Maksimal</button>'
+    + '</div>'
+    + '<div class="mini" style="color:var(--mut)">Tersimpan dan langsung aktif di Beranda</div>'
+    + '</div>'
+    + '</div>';
+}
+
 export function aCompany() {
   const co = dCo();
   return '<h3>Kontak & Akses</h3><p class="tiny">Kelola kontak kantor/pabrik, email sales/investor, jam kerja, video hero beranda, dan password login admin.</p>'
@@ -333,6 +398,7 @@ export function aCompany() {
     + fText('corp', 'Email Corporate Development (investor)', co.corp, 1)
     + '<div class="f f-full"><label>URL Video Hero Beranda (mp4)</label><input name="video" value="' + esc(co.video || '') + '" placeholder="factory.mp4 atau https://…/video.mp4 — pisahkan beberapa URL dengan koma">'
     + '<span class="mini" style="display:block;margin-top:6px;line-height:1.6">Letakkan file video bernama <b>factory.mp4</b> di folder yang sama dengan index.html, atau tempel URL video online (.mp4). Jika video gagal dimuat, otomatis tampil background animasi blueprint.</span></div>'
+    + fHeroLight(co.heroLight, co.video)
     + fTa('addr', 'Alamat Pabrik & Kantor', co.addr)
     + fText('mapLabel', 'Label Lokasi Peta', co.mapLabel || 'Jababeka II — Cikarang, Bekasi')
     + fText('mapQuery', 'Keyword / Alamat Google Maps (otomatis geocoding)', co.mapQuery || co.addr || '')
@@ -343,15 +409,28 @@ export function aCompany() {
 }
 
 /* ============================================================
-   KONTEN BERANDA: 4 Pilar, 4 Alasan, Sektor Industri
+   KONTEN BERANDA: Banner Hero, 4 Pilar, 4 Alasan, Sektor Industri
    ============================================================ */
 export function aHomeContent(sub) {
-  sub = sub || 'pillars';
+  sub = sub || 'hero';
   const subnav = '<div class="adm-subnav">'
+    + '<button class="' + (sub === 'hero' ? 'on' : '') + '" data-sub="hero">Banner Hero & Cahaya Background</button>'
     + '<button class="' + (sub === 'pillars' ? 'on' : '') + '" data-sub="pillars">4 Pilar Layanan (What We Do)</button>'
     + '<button class="' + (sub === 'why' ? 'on' : '') + '" data-sub="why">4 Alasan Memilih JRI (Why Us)</button>'
     + '<button class="' + (sub === 'industries' ? 'on' : '') + '" data-sub="industries">Sektor Industri Pelanggan</button>'
     + '</div>';
+
+  if (sub === 'hero') {
+    const co = dCo() || {};
+    return '<h3>Konten Beranda — Banner Hero & Background</h3>'
+      + '<p class="tiny">Kelola video latar belakang dan intensitas cahaya/kecerahan background pada banner utama Beranda (PRD §7.1).</p>'
+      + subnav
+      + '<form id="heroform" class="form" style="margin-top:14px">'
+      + '<div class="f f-full"><label>URL Video Hero Beranda (mp4)</label><input name="video" value="' + esc(co.video || '') + '" placeholder="factory.mp4 atau https://…/video.mp4 — pisahkan beberapa URL dengan koma">'
+      + '<span class="mini" style="display:block;margin-top:6px;line-height:1.6">Letakkan file video bernama <b>factory.mp4</b> di folder website, atau tempel URL video online (.mp4). Jika video gagal dimuat, otomatis tampil background animasi blueprint.</span></div>'
+      + fHeroLight(co.heroLight, co.video)
+      + '<div class="f-full"><button class="btn btn-red">Simpan Pengaturan Hero</button></div></form>';
+  }
 
   if (sub === 'pillars') {
     const P = dPillars() || [];
@@ -669,6 +748,67 @@ export function renderAdmin(tab, sub) {
     + '<div class="adm-card">' + body + '</div></div></section>';
 }
 
+function initHeroLightControls(container) {
+  const c = container || document;
+  const range = c.querySelector('#herolightrange');
+  const valEl = c.querySelector('#herolightval');
+  const lblEl = c.querySelector('#herolightlbl');
+  const prevShade = c.querySelector('#heroprevshade');
+  const prevMedia = c.querySelector('#heroprevmedia');
+  const prevFallback = c.querySelector('#heroprevfallback');
+  const prevBadge = c.querySelector('#heroprevbadge');
+  const vidInput = c.querySelector('input[name="video"]');
+
+  if (!range) return;
+
+  const getLabel = v => {
+    if (v < 35) return '(🌙 Redup / Gelap)';
+    if (v < 65) return '(⚖️ Normal / Seimbang)';
+    if (v < 85) return '(☀️ Terang)';
+    return '(✨ Sangat Terang)';
+  };
+
+  const updateVisuals = () => {
+    const v = Math.max(10, Math.min(100, Number(range.value || 50)));
+    if (valEl) valEl.textContent = v + '%';
+    if (lblEl) lblEl.textContent = getLabel(v);
+    if (prevBadge) prevBadge.textContent = 'Cahaya: ' + v + '%';
+
+    const shadeOpacity = Math.max(0.08, Math.min(0.98, 1.05 - (v / 100) * 0.90)).toFixed(2);
+    const videoOpacity = Math.max(0.20, Math.min(1.0, 0.25 + (v / 100) * 0.70)).toFixed(2);
+    const videoBrightness = (0.75 + (v / 100) * 0.50).toFixed(2);
+    const fallbackOpacity = Math.max(0.15, Math.min(0.85, 0.20 + (v / 100) * 0.60)).toFixed(2);
+
+    if (prevShade) prevShade.style.opacity = shadeOpacity;
+    if (prevMedia) {
+      prevMedia.style.opacity = videoOpacity;
+      prevMedia.style.filter = 'brightness(' + videoBrightness + ')';
+    }
+    if (prevFallback) prevFallback.style.opacity = fallbackOpacity;
+  };
+
+  range.oninput = updateVisuals;
+
+  c.querySelectorAll('[data-hl-set]').forEach(btn => {
+    btn.onclick = () => {
+      range.value = btn.dataset.hlSet;
+      updateVisuals();
+    };
+  });
+
+  if (vidInput && prevMedia) {
+    vidInput.addEventListener('input', () => {
+      const src = (vidInput.value || 'factory.mp4').split(',')[0].trim();
+      const source = prevMedia.querySelector('source');
+      if (source && src && source.getAttribute('src') !== src) {
+        source.src = src;
+        prevMedia.load();
+        prevMedia.play().catch(() => {});
+      }
+    });
+  }
+}
+
 export function mountAdmin(seg, router, goHash) {
   if (!isLogged()) {
     const lf = qs('#lform');
@@ -808,7 +948,27 @@ export function mountAdmin(seg, router, goHash) {
   }
 
   if (T === 'home-content') {
-    const sub = seg[2] || 'pillars';
+    const sub = seg[2] || 'hero';
+
+    if (sub === 'hero') {
+      const hf = qs('#heroform');
+      if (hf) {
+        initHeroLightControls(hf);
+        hf.onsubmit = e => {
+          e.preventDefault();
+          const fd = {};
+          qa('input', hf).forEach(el => fd[el.name] = el.value);
+          const curCo = dCo() || {};
+          DB.set('company', {
+            ...curCo,
+            video: (fd.video || '').trim(),
+            heroLight: Number(fd.heroLight !== undefined ? fd.heroLight : 50)
+          });
+          toast('Pengaturan Hero & Background tersimpan');
+          router(true);
+        };
+      }
+    }
 
     if (sub === 'pillars') {
       const ed = qs('#pillared');
@@ -1653,6 +1813,7 @@ export function mountAdmin(seg, router, goHash) {
     });
     const f = qs('#coform');
     if (f) {
+      initHeroLightControls(f);
       f.onsubmit = async e => {
         e.preventDefault();
         const fd = {};
@@ -1668,6 +1829,7 @@ export function mountAdmin(seg, router, goHash) {
           addr: fd.addr,
           hours: fd.hours,
           video: (fd.video || '').trim(),
+          heroLight: Number(fd.heroLight !== undefined ? fd.heroLight : 50),
           mapLabel: (fd.mapLabel || '').trim(),
           mapQuery: (fd.mapQuery || '').trim(),
           mapEmbed: (fd.mapEmbed || '').trim()

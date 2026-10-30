@@ -7,6 +7,7 @@ export const CO = {
   addr: 'Kawasan Industri Jababeka II, Cikarang, Bekasi, Jawa Barat 17530, Indonesia',
   hours: 'Mon – Fri 08:00 – 17:00 WIB',
   video: 'factory.mp4',
+  heroLight: 50,
   mapLabel: 'Jababeka II — Cikarang, Bekasi',
   mapQuery: 'Kawasan Industri Jababeka II, Cikarang, Bekasi, Jawa Barat 17530, Indonesia',
   mapEmbed: ''
