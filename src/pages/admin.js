@@ -372,7 +372,7 @@ export function fHeroLight(curVal, videoUrl) {
 
     // Slider & Presets
     + '<div style="margin:12px 0 10px">'
-    + '<input type="range" name="heroLight" id="herolightrange" min="10" max="100" step="5" value="' + val + '" style="width:100%;height:8px;border-radius:6px;accent-color:var(--red);cursor:pointer">'
+    + '<input type="range" name="heroLight" id="herolightrange" min="10" max="100" step="5" value="' + val + '" aria-label="Intensitas Cahaya Background Hero Beranda" style="width:100%;height:8px;border-radius:6px;accent-color:var(--red);cursor:pointer">'
     + '</div>'
     + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">'
     + '<div style="display:flex;gap:6px;flex-wrap:wrap">'

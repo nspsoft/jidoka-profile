@@ -39,7 +39,7 @@ export const ic = (n, c = '') => '<svg class="ic ' + c + '" viewBox="0 0 24 24" 
 
 export const logo = (customUrl = '', alt = 'JRI') => {
   if (customUrl) {
-    return '<img src="' + customUrl + '" alt="' + alt + '" class="logo-custom-img" style="height:36px;max-width:140px;object-fit:contain;display:inline-block;vertical-align:middle">';
+    return '<img src="' + customUrl + '" alt="' + alt + '" class="logo-custom-img" width="140" height="36" style="height:36px;max-width:140px;object-fit:contain;display:inline-block;vertical-align:middle">';
   }
   return '<svg viewBox="0 0 64 64" aria-label="JRI"><path d="M11 21A26 26 0 0 1 53 21" fill="none" stroke="#16336e" stroke-width="7"/><path d="M11 43A26 26 0 0 0 53 43" fill="none" stroke="#16336e" stroke-width="7"/><circle cx="32" cy="32" r="19" fill="#d71920"/><text x="32" y="38.5" text-anchor="middle" font-family="Arial" font-weight="900" font-size="15" fill="#fff">JRI</text></svg>';
 };

@@ -6,7 +6,7 @@ import { L } from '../i18n.js';
 export const pcard = p => {
   const hasPhoto = Array.isArray(p.images) && p.images.length > 0 && p.images[0];
   const artContent = hasPhoto
-    ? '<img src="' + esc(p.images[0]) + '" alt="' + esc(p.name) + '" loading="lazy">'
+    ? '<img src="' + esc(p.images[0]) + '" alt="' + esc(p.name) + '" width="300" height="190" loading="lazy">'
     : art(p.art, p.name);
 
   return '<a class="pcard" href="#/product/' + esc(p.id) + '">'
