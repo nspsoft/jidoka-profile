@@ -59,9 +59,37 @@ export async function initDB() {
       id INT AUTO_INCREMENT PRIMARY KEY,
       email VARCHAR(128) NOT NULL UNIQUE,
       password_hash VARCHAR(255) NOT NULL,
+      mfa_enabled TINYINT(1) NOT NULL DEFAULT 0,
+      totp_secret VARCHAR(64) DEFAULT NULL,
+      totp_temp_secret VARCHAR(64) DEFAULT NULL,
+      backup_codes TEXT DEFAULT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   `);
+
+  // Ensure MFA columns exist for existing installations
+  try {
+    const [cols] = await pool.query(
+      "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'admin_users'",
+      [DB_NAME]
+    );
+    const colNames = new Set(cols.map(c => c.COLUMN_NAME));
+
+    if (!colNames.has('mfa_enabled')) {
+      await pool.query('ALTER TABLE admin_users ADD COLUMN mfa_enabled TINYINT(1) NOT NULL DEFAULT 0');
+    }
+    if (!colNames.has('totp_secret')) {
+      await pool.query('ALTER TABLE admin_users ADD COLUMN totp_secret VARCHAR(64) DEFAULT NULL');
+    }
+    if (!colNames.has('totp_temp_secret')) {
+      await pool.query('ALTER TABLE admin_users ADD COLUMN totp_temp_secret VARCHAR(64) DEFAULT NULL');
+    }
+    if (!colNames.has('backup_codes')) {
+      await pool.query('ALTER TABLE admin_users ADD COLUMN backup_codes TEXT DEFAULT NULL');
+    }
+  } catch (err) {
+    console.warn('⚠️ Could not verify/migrate admin_users columns:', err.message);
+  }
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS uploads (

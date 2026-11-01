@@ -80,3 +80,20 @@
 .pw-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;padding:7px;cursor:pointer;color:var(--mut);display:inline-flex;align-items:center;justify-content:center;border-radius:6px;transition:.2s;z-index:2;line-height:1}
 .pw-toggle:hover{color:var(--navy);background:rgba(14,35,80,.07)}
 .pw-toggle .ic{width:18px;height:18px;display:block}
+
+/* MFA Google Authenticator Components */
+.mfa-card{background:#fff;border:1px solid var(--bdr);border-radius:12px;padding:24px;box-shadow:0 4px 16px rgba(11,28,63,.06)}
+.mfa-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:6px;font:700 11px/1.2 'Barlow';letter-spacing:.05em;text-transform:uppercase}
+.mfa-badge.on{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
+.mfa-badge.off{background:#fef3c7;color:#92400e;border:1px solid #fde68a}
+.mfa-input{font-family:'Courier New',Courier,monospace;font-size:26px!important;font-weight:700!important;letter-spacing:8px!important;text-align:center!important;padding:12px 14px!important;color:var(--navy)!important;background:#f8fafc!important;border:2px solid var(--bdr)!important;border-radius:8px!important}
+.mfa-input:focus{border-color:var(--navy)!important;background:#fff!important;outline:none;box-shadow:0 0 0 3px rgba(22,51,110,.12)}
+.mfa-qr-box{background:#fff;border:1px solid var(--bdr);border-radius:10px;padding:14px;display:inline-flex;justify-content:center;align-items:center;margin:12px 0;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.mfa-qr-box svg{display:block;width:180px;height:180px}
+.mfa-secret-key{font-family:monospace;font-size:14px;font-weight:700;letter-spacing:2px;background:#f1f5f9;color:#0f172a;padding:8px 12px;border-radius:6px;border:1px dashed #cbd5e1;display:inline-block;word-break:break-all}
+.mfa-backup-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:14px 0}
+.mfa-backup-item{font-family:monospace;font-weight:700;font-size:13px;letter-spacing:1px;background:#f8fafc;border:1px solid #e2e8f0;padding:6px 10px;border-radius:6px;text-align:center;color:#1e293b}
+.mfa-modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(11,28,63,.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px}
+.mfa-modal{background:#fff;border-radius:12px;box-shadow:0 12px 36px rgba(0,0,0,.2);width:100%;max-width:480px;max-height:92vh;overflow-y:auto;padding:24px;border:1px solid rgba(255,255,255,.2)}
+.mfa-modal h4{font-family:'Barlow Condensed',sans-serif;font-size:22px;color:var(--navy);margin-bottom:6px;text-transform:uppercase}
+

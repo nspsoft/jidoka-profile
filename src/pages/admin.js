@@ -1,5 +1,5 @@
 import { DB, dbRead, dbWrite, DEF, dP, dN, dC, dR, dCo, dPillars, dWhy, dIndustries, dTour, dMach, dFlow, dCerts, dWay, dHist, dGov } from '../data/db.js';
-import { isLogged, doLogin, doLogout, authFetch } from '../data/auth.js';
+import { isLogged, doLogin, doMfaLogin, doLogout, authFetch, getMfaStatus, setupMfa, verifyMfaSetup, disableMfa, regenerateBackupCodes } from '../data/auth.js';
 import { esc, qs, qa, lines, parsePairs, slug } from '../components/dom.js';
 import { logo, ic } from '../components/icons.js';
 import { toast } from '../components/toast.js';
@@ -10,6 +10,8 @@ import { L } from '../i18n.js';
 export { isLogged, doLogin, doLogout };
 
 let cachedLeads = [];
+let currentMfaTicket = null;
+let isBackupMode = false;
 
 export async function fetchLeads() {
   try {
@@ -417,7 +419,7 @@ export function fHeroLight(curVal, videoUrl) {
 
 export function aCompany() {
   const co = dCo();
-  return '<h3>Kontak & Akses</h3><p class="tiny">Kelola kontak kantor/pabrik, email sales/investor, jam kerja, video hero beranda, dan password login admin.</p>'
+  return '<h3>Kontak & Akses</h3><p class="tiny">Kelola kontak kantor/pabrik, email sales/investor, jam kerja, video hero beranda, password login admin, dan keamanan MFA.</p>'
     + '<form id="coform" class="form" style="margin-top:14px">'
     + fText('phone', 'Telepon Kantor', co.phone, 1)
     + fText('wa', 'Nomor WhatsApp Sales (Floating Button)', co.wa || co.phone || '', 1)
@@ -433,7 +435,17 @@ export function aCompany() {
     + '<div class="f f-full"><label>Custom Google Maps Embed URL (opsional)</label><input name="mapEmbed" value="' + esc(co.mapEmbed || '') + '" placeholder="https://maps.google.com/maps?q=...&output=embed">'
     + '<span class="mini" style="display:block;margin-top:4px;color:var(--mut)">Kosongkan untuk otomatis menggunakan pencarian alamat di atas. Peta interaktif langsung aktif di halaman Kontak website.</span></div>'
     + '<div class="f"><label>Password Baru (opsional)</label><div class="pw-wrap"><input name="npw" id="npw" type="password" placeholder="Kosongkan jika tidak diganti"><button type="button" class="pw-toggle" data-pw-target="npw" aria-label="Lihat / Sembunyikan Password" tabindex="-1">' + ic('eye') + '</button></div></div>'
-    + '<div class="f" style="display:flex;align-items:flex-end"><button class="btn btn-red">Simpan</button></div></form>';
+    + '<div class="f" style="display:flex;align-items:flex-end"><button class="btn btn-red">Simpan Kontak & Password</button></div></form>'
+    + '<hr style="border:0;border-top:1px solid var(--bdr);margin:36px 0 24px">'
+    + '<div class="mfa-card" id="mfasec">'
+    + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">'
+    + '<div><div style="display:flex;align-items:center;gap:8px">' + ic('shield') + '<h4 style="font-family:\'Barlow Condensed\';font-size:20px;color:var(--navy);margin:0">AUTENTIKASI DUA FAKTOR (GOOGLE AUTHENTICATOR / MFA)</h4></div>'
+    + '<p class="tiny" style="margin-top:6px">Tingkatkan keamanan akun Admin CMS dengan mewajibkan verifikasi kode 6-digit dari aplikasi Google Authenticator saat login.</p></div>'
+    + '<div id="mfa-status-badge"><span class="mfa-badge off">Memuat status...</span></div>'
+    + '</div>'
+    + '<div id="mfa-actions-box" style="margin-top:16px"><p class="tiny" style="color:var(--mut)">Menghubungkan ke modul keamanan server...</p></div>'
+    + '</div>'
+    + '<div id="mfa-modal-container"></div>';
 }
 
 /* ============================================================
@@ -728,13 +740,25 @@ export function aBackup() {
 
 export function renderAdmin(tab, sub) {
   if (!isLogged()) {
-    return '<section class="sec" style="padding-top:48px"><div class="wrap" style="max-width:430px"><div class="panel-card">'
+    return '<section class="sec" style="padding-top:48px"><div class="wrap" style="max-width:440px"><div class="panel-card">'
+      + '<div id="login-step1">'
       + '<h3 style="font-family:\'Barlow Condensed\';font-size:26px;text-transform:uppercase;color:var(--navy)">Login Admin CMS</h3>'
       + '<p class="tiny" style="margin:6px 0 16px">Autentikasi akun admin server.<br>Default: <b>admin@jidoka.co.id</b> / <b>jidoka2026</b></p>'
       + '<form id="lform" class="form" style="grid-template-columns:1fr">'
-      + '<div class="f"><label>Email</label><input name="email" type="email" value="admin@jidoka.co.id" required></div>'
+      + '<div class="f"><label>Email</label><input name="email" id="lemail" type="email" value="admin@jidoka.co.id" required></div>'
       + '<div class="f"><label>Password</label><div class="pw-wrap"><input name="pw" id="lpw" type="password" required autocomplete="current-password"><button type="button" class="pw-toggle" id="lpwtoggle" aria-label="Lihat / Sembunyikan Password" tabindex="-1">' + ic('eye') + '</button></div><div class="err" id="lerr">Email atau password salah</div></div>'
-      + '<button class="btn btn-red" style="width:100%">Masuk</button></form></div></div></section>';
+      + '<button class="btn btn-red" style="width:100%" id="lsubmit">Masuk</button></form></div>'
+      + '<div id="login-step2" style="display:none">'
+      + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">' + ic('shield') + '<h3 style="font-family:\'Barlow Condensed\';font-size:24px;text-transform:uppercase;color:var(--navy);margin:0">Verifikasi 2 Langkah</h3></div>'
+      + '<p class="tiny" id="mfa-sub-text" style="margin-bottom:18px">Buka aplikasi <b>Google Authenticator</b> pada ponsel Anda dan masukkan 6 digit kode akun <b id="mfa-display-email">admin@jidoka.co.id</b>.</p>'
+      + '<form id="mfaform" class="form" style="grid-template-columns:1fr">'
+      + '<div class="f"><label id="mfalabel">Kode Google Authenticator (6 Digit)</label><input name="mfacode" id="mfacode" type="text" maxlength="6" inputmode="numeric" autocomplete="one-time-code" placeholder="000 000" class="mfa-input" required><div class="err" id="mfaerr">Kode tidak valid</div></div>'
+      + '<button class="btn btn-red" style="width:100%" id="mfasubmit">Verifikasi & Masuk</button>'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;font-size:12px">'
+      + '<a href="#" id="toggle-backup-mode" style="color:var(--navy);font-weight:600">Gunakan Kode Cadangan</a>'
+      + '<a href="#" id="back-to-step1" style="color:var(--mut)">← Kembali</a>'
+      + '</div></form></div>'
+      + '</div></div></section>';
   }
   tab = tab || 'dash';
   const unhandled = cachedLeads.filter(l => l.status === 'new').length;
@@ -1008,10 +1032,95 @@ export function mountAdmin(seg, router, goHash) {
           toast('Selamat datang');
           await fetchLeads();
           router(true);
+        } else if (res.mfa_required) {
+          currentMfaTicket = res.mfa_ticket;
+          isBackupMode = false;
+          const s1 = qs('#login-step1');
+          const s2 = qs('#login-step2');
+          const dispEmail = qs('#mfa-display-email');
+          const codeInp = qs('#mfacode');
+          if (s1 && s2) {
+            s1.style.display = 'none';
+            s2.style.display = 'block';
+          }
+          if (dispEmail) dispEmail.textContent = email;
+          if (codeInp) {
+            codeInp.value = '';
+            codeInp.focus();
+          }
         } else {
           const fe = qs('#lerr');
           if (fe) {
             fe.textContent = res.message || 'Email atau password salah';
+            fe.parentElement.classList.add('bad');
+            fe.style.display = 'block';
+          }
+        }
+      };
+    }
+
+    const mf = qs('#mfaform');
+    if (mf) {
+      const backupToggle = qs('#toggle-backup-mode');
+      const backBtn = qs('#back-to-step1');
+      const codeInp = qs('#mfacode');
+      const mfaLabel = qs('#mfalabel');
+      const mfaSubText = qs('#mfa-sub-text');
+
+      if (backupToggle) {
+        backupToggle.onclick = e => {
+          e.preventDefault();
+          isBackupMode = !isBackupMode;
+          if (isBackupMode) {
+            if (mfaLabel) mfaLabel.textContent = 'Kode Cadangan Darurat (8 Karakter)';
+            if (codeInp) {
+              codeInp.placeholder = 'XXXX-XXXX';
+              codeInp.maxLength = 9;
+              codeInp.inputMode = 'text';
+              codeInp.value = '';
+            }
+            backupToggle.textContent = 'Gunakan Google Authenticator';
+            if (mfaSubText) mfaSubText.innerHTML = 'Masukkan salah satu dari 8 <b>Kode Cadangan Darurat</b> yang Anda simpan saat aktivasi MFA.';
+          } else {
+            if (mfaLabel) mfaLabel.textContent = 'Kode Google Authenticator (6 Digit)';
+            if (codeInp) {
+              codeInp.placeholder = '000 000';
+              codeInp.maxLength = 6;
+              codeInp.inputMode = 'numeric';
+              codeInp.value = '';
+            }
+            backupToggle.textContent = 'Gunakan Kode Cadangan';
+            const userEmail = (lf && lf.email && lf.email.value) || 'admin@jidoka.co.id';
+            if (mfaSubText) mfaSubText.innerHTML = 'Buka aplikasi <b>Google Authenticator</b> pada ponsel Anda dan masukkan 6 digit kode akun <b>' + esc(userEmail) + '</b>.';
+          }
+          if (codeInp) codeInp.focus();
+        };
+      }
+
+      if (backBtn) {
+        backBtn.onclick = e => {
+          e.preventDefault();
+          const s1 = qs('#login-step1');
+          const s2 = qs('#login-step2');
+          if (s1 && s2) {
+            s2.style.display = 'none';
+            s1.style.display = 'block';
+          }
+        };
+      }
+
+      mf.onsubmit = async e => {
+        e.preventDefault();
+        const code = (codeInp && codeInp.value) || '';
+        const res = await doMfaLogin(currentMfaTicket, code, isBackupMode);
+        if (res.ok) {
+          toast(res.message || 'Verifikasi berhasil');
+          await fetchLeads();
+          router(true);
+        } else {
+          const fe = qs('#mfaerr');
+          if (fe) {
+            fe.textContent = res.message || 'Kode verifikasi tidak valid';
             fe.parentElement.classList.add('bad');
             fe.style.display = 'block';
           }
@@ -2030,6 +2139,241 @@ export function mountAdmin(seg, router, goHash) {
         toast('Tersimpan');
         router(true);
       };
+    }
+
+    // MFA Management in Company Tab
+    const mfaSec = qs('#mfasec');
+    if (mfaSec) {
+      const badgeEl = qs('#mfa-status-badge');
+      const actionsEl = qs('#mfa-actions-box');
+      const modalEl = qs('#mfa-modal-container');
+
+      const renderStatus = async () => {
+        try {
+          const st = await getMfaStatus();
+          if (st.mfa_enabled) {
+            badgeEl.innerHTML = '<span class="mfa-badge on">' + ic('checkc') + ' Aktif & Terlindungi</span>';
+            actionsEl.innerHTML = '<div style="display:flex;flex-direction:column;gap:12px">'
+              + '<p class="tiny" style="color:var(--txt)">Akun Admin saat ini terlindungi dengan autentikasi dua faktor Google Authenticator.<br>'
+              + 'Sisa Kode Cadangan Darurat: <b>' + (st.backup_codes_remaining || 0) + ' kode</b></p>'
+              + '<div style="display:flex;gap:10px;flex-wrap:wrap">'
+              + '<button type="button" class="btn btn-line btn-sm" id="btn-mfa-regen">' + ic('sync') + ' Buat Ulang Kode Cadangan</button>'
+              + '<button type="button" class="btn btn-sm" id="btn-mfa-disable" style="color:var(--red);border:1.5px solid var(--red);border-radius:9px;padding:8px 14px;background:#fff">' + ic('trash') + ' Nonaktifkan MFA</button>'
+              + '</div></div>';
+
+            const regenBtn = qs('#btn-mfa-regen');
+            if (regenBtn) regenBtn.onclick = () => showRegenModal();
+
+            const disableBtn = qs('#btn-mfa-disable');
+            if (disableBtn) disableBtn.onclick = () => showDisableModal();
+          } else {
+            badgeEl.innerHTML = '<span class="mfa-badge off">⚠️ Belum Aktif</span>';
+            actionsEl.innerHTML = '<div style="display:flex;flex-direction:column;gap:12px">'
+              + '<p class="tiny" style="color:var(--txt)">Akun saat ini hanya dilindungi kata sandi. Sangat disarankan mengaktifkan Google Authenticator untuk mencegah akses tidak sah.</p>'
+              + '<div><button type="button" class="btn btn-red btn-sm" id="btn-mfa-setup">' + ic('shield') + ' Aktifkan Google Authenticator</button></div>'
+              + '</div>';
+
+            const setupBtn = qs('#btn-mfa-setup');
+            if (setupBtn) setupBtn.onclick = () => showSetupModal();
+          }
+        } catch (e) {
+          badgeEl.innerHTML = '<span class="mfa-badge off">Gagal memuat status</span>';
+        }
+      };
+
+      const closeModal = () => {
+        if (modalEl) modalEl.innerHTML = '';
+      };
+
+      const showSetupModal = async () => {
+        modalEl.innerHTML = '<div class="mfa-modal-overlay"><div class="mfa-modal">'
+          + '<h4>Menyiapkan Google Authenticator...</h4>'
+          + '<p class="tiny">Menghubungi server untuk membuat kunci rahasia aman...</p>'
+          + '</div></div>';
+
+        const res = await setupMfa();
+        if (!res.success) {
+          modalEl.innerHTML = '<div class="mfa-modal-overlay"><div class="mfa-modal">'
+            + '<h4>Gagal Memulai Setup</h4>'
+            + '<p class="tiny" style="color:var(--red)">' + esc(res.message || 'Terjadi kesalahan') + '</p>'
+            + '<button type="button" class="btn btn-line btn-sm" id="mfa-close-err" style="margin-top:14px">Tutup</button>'
+            + '</div></div>';
+          qs('#mfa-close-err').onclick = closeModal;
+          return;
+        }
+
+        const formattedSecret = (res.secret.match(/.{1,4}/g) || [res.secret]).join(' ');
+
+        modalEl.innerHTML = '<div class="mfa-modal-overlay"><div class="mfa-modal">'
+          + '<div style="display:flex;justify-content:space-between;align-items:center">'
+          + '<h4>Aktivasi Google Authenticator</h4>'
+          + '<button type="button" class="btn-close" id="mfa-close-x" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--mut)">' + ic('x') + '</button>'
+          + '</div>'
+          + '<p class="tiny" style="margin:6px 0 12px">Ikuti 2 langkah berikut untuk mengamankan akun Admin:</p>'
+          + '<div style="background:#f8fafc;border:1px solid var(--bdr);border-radius:8px;padding:12px;margin-bottom:14px">'
+          + '<b style="font-size:13px;display:block;margin-bottom:6px">Langkah 1: Pindai QR Code di Google Authenticator</b>'
+          + '<p class="tiny">Buka aplikasi Google Authenticator di ponsel Anda, tap ikon <b>+</b> dan pilih <b>Scan a QR code</b>.</p>'
+          + '<div style="text-align:center"><div class="mfa-qr-box">' + res.qrSvg + '</div></div>'
+          + '<div style="text-align:center;margin-top:4px">'
+          + '<span class="mini" style="display:block;margin-bottom:4px">Atau masukkan Kunci Rahasia ini secara manual:</span>'
+          + '<span class="mfa-secret-key" id="mfasecrettext">' + esc(formattedSecret) + '</span>'
+          + '<div style="margin-top:6px"><button type="button" class="btn btn-line btn-sm" id="btn-copy-secret" style="font-size:11px;padding:4px 8px">📋 Salin Kunci</button></div>'
+          + '</div></div>'
+          + '<form id="mfa-verify-setup-form">'
+          + '<b style="font-size:13px;display:block;margin-bottom:6px">Langkah 2: Konfirmasi Kode 6-Digit</b>'
+          + '<p class="tiny" style="margin-bottom:8px">Masukkan 6 digit kode yang tampil di Google Authenticator:</p>'
+          + '<input type="text" id="mfa-setup-code" maxlength="6" inputmode="numeric" placeholder="000 000" class="mfa-input" style="width:100%" required autofocus>'
+          + '<div class="err" id="mfa-setup-err" style="margin-top:6px"></div>'
+          + '<div style="display:flex;gap:10px;margin-top:14px">'
+          + '<button class="btn btn-red" style="flex:1" id="btn-submit-setup">Verifikasi & Aktifkan</button>'
+          + '<button type="button" class="btn btn-line" id="mfa-cancel-setup">Batal</button>'
+          + '</div></form>'
+          + '</div></div>';
+
+        qs('#mfa-close-x').onclick = closeModal;
+        qs('#mfa-cancel-setup').onclick = closeModal;
+
+        qs('#btn-copy-secret').onclick = () => {
+          navigator.clipboard.writeText(res.secret);
+          toast('Kunci rahasia disalin ke clipboard');
+        };
+
+        const setupForm = qs('#mfa-verify-setup-form');
+        setupForm.onsubmit = async e => {
+          e.preventDefault();
+          const code = qs('#mfa-setup-code').value;
+          const subBtn = qs('#btn-submit-setup');
+          subBtn.disabled = true;
+          subBtn.textContent = 'Memverifikasi...';
+
+          const verRes = await verifyMfaSetup(code);
+          if (verRes.success) {
+            toast('Google Authenticator berhasil diaktifkan!');
+            showBackupCodesModal(verRes.backupCodes || []);
+            renderStatus();
+          } else {
+            subBtn.disabled = false;
+            subBtn.textContent = 'Verifikasi & Aktifkan';
+            const errEl = qs('#mfa-setup-err');
+            if (errEl) {
+              errEl.textContent = verRes.message || 'Kode tidak valid';
+              errEl.style.display = 'block';
+            }
+          }
+        };
+      };
+
+      const showBackupCodesModal = (codes) => {
+        const gridHtml = codes.map(c => '<div class="mfa-backup-item">' + esc(c) + '</div>').join('');
+        modalEl.innerHTML = '<div class="mfa-modal-overlay"><div class="mfa-modal">'
+          + '<div style="display:flex;align-items:center;gap:8px">' + ic('checkc') + '<h4 style="margin:0;color:#166534">MFA Berhasil Diaktifkan!</h4></div>'
+          + '<p class="tiny" style="margin:10px 0 6px">Simpan <b>8 Kode Cadangan Darurat</b> ini di tempat yang aman. Setiap kode hanya dapat digunakan satu kali untuk login jika Anda kehilangan akses ke ponsel Anda:</p>'
+          + '<div class="mfa-backup-grid">' + gridHtml + '</div>'
+          + '<div style="display:flex;gap:10px;margin-top:18px">'
+          + '<button type="button" class="btn btn-line btn-sm" id="btn-copy-backup" style="flex:1">📋 Salin Semua Kode</button>'
+          + '<button type="button" class="btn btn-red btn-sm" id="btn-close-backup" style="flex:1">Selesai (Tutup)</button>'
+          + '</div></div></div>';
+
+        qs('#btn-copy-backup').onclick = () => {
+          navigator.clipboard.writeText(codes.join('\n'));
+          toast('Semua kode cadangan disalin ke clipboard');
+        };
+
+        qs('#btn-close-backup').onclick = () => {
+          closeModal();
+          renderStatus();
+        };
+      };
+
+      const showDisableModal = () => {
+        modalEl.innerHTML = '<div class="mfa-modal-overlay"><div class="mfa-modal">'
+          + '<div style="display:flex;justify-content:space-between;align-items:center">'
+          + '<h4 style="color:var(--red)">Nonaktifkan Google Authenticator</h4>'
+          + '<button type="button" class="btn-close" id="mfa-dis-close" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--mut)">' + ic('x') + '</button>'
+          + '</div>'
+          + '<p class="tiny" style="margin:8px 0 14px">Untuk keamanan, masukkan password admin dan kode 6 digit Google Authenticator saat ini untuk mengonfirmasi penonaktifan:</p>'
+          + '<form id="mfa-dis-form" class="form" style="grid-template-columns:1fr">'
+          + '<div class="f"><label>Password Admin</label><input type="password" id="mfa-dis-pw" required></div>'
+          + '<div class="f"><label>Kode Google Authenticator Saat Ini (6 Digit)</label><input type="text" id="mfa-dis-code" maxlength="6" inputmode="numeric" placeholder="000 000" class="mfa-input" required></div>'
+          + '<div class="err" id="mfa-dis-err"></div>'
+          + '<div style="display:flex;gap:10px;margin-top:14px">'
+          + '<button class="btn btn-red" style="flex:1" id="mfa-dis-btn">Konfirmasi Nonaktifkan</button>'
+          + '<button type="button" class="btn btn-line" id="mfa-dis-cancel">Batal</button>'
+          + '</div></form>'
+          + '</div></div>';
+
+        qs('#mfa-dis-close').onclick = closeModal;
+        qs('#mfa-dis-cancel').onclick = closeModal;
+
+        qs('#mfa-dis-form').onsubmit = async e => {
+          e.preventDefault();
+          const pw = qs('#mfa-dis-pw').value;
+          const code = qs('#mfa-dis-code').value;
+          const btn = qs('#mfa-dis-btn');
+          btn.disabled = true;
+          btn.textContent = 'Memproses...';
+
+          const res = await disableMfa(pw, code);
+          if (res.success) {
+            toast('MFA berhasil dinonaktifkan');
+            closeModal();
+            renderStatus();
+          } else {
+            btn.disabled = false;
+            btn.textContent = 'Konfirmasi Nonaktifkan';
+            const errEl = qs('#mfa-dis-err');
+            if (errEl) {
+              errEl.textContent = res.message || 'Gagal menonaktifkan MFA';
+              errEl.style.display = 'block';
+            }
+          }
+        };
+      };
+
+      const showRegenModal = () => {
+        modalEl.innerHTML = '<div class="mfa-modal-overlay"><div class="mfa-modal">'
+          + '<div style="display:flex;justify-content:space-between;align-items:center">'
+          + '<h4>Buat Ulang Kode Cadangan Darurat</h4>'
+          + '<button type="button" class="btn-close" id="mfa-reg-close" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--mut)">' + ic('x') + '</button>'
+          + '</div>'
+          + '<p class="tiny" style="margin:8px 0 14px">Masukkan password admin untuk membuat 8 kode cadangan baru (kode cadangan lama akan hangus):</p>'
+          + '<form id="mfa-reg-form" class="form" style="grid-template-columns:1fr">'
+          + '<div class="f"><label>Password Admin</label><input type="password" id="mfa-reg-pw" required></div>'
+          + '<div class="err" id="mfa-reg-err"></div>'
+          + '<div style="display:flex;gap:10px;margin-top:14px">'
+          + '<button class="btn btn-red" style="flex:1" id="mfa-reg-btn">Buat Kode Baru</button>'
+          + '<button type="button" class="btn btn-line" id="mfa-reg-cancel">Batal</button>'
+          + '</div></form>'
+          + '</div></div>';
+
+        qs('#mfa-reg-close').onclick = closeModal;
+        qs('#mfa-reg-cancel').onclick = closeModal;
+
+        qs('#mfa-reg-form').onsubmit = async e => {
+          e.preventDefault();
+          const pw = qs('#mfa-reg-pw').value;
+          const btn = qs('#mfa-reg-btn');
+          btn.disabled = true;
+          btn.textContent = 'Membuat...';
+
+          const res = await regenerateBackupCodes(pw);
+          if (res.success) {
+            toast('Kode cadangan baru berhasil dibuat');
+            showBackupCodesModal(res.backupCodes || []);
+            renderStatus();
+          } else {
+            btn.disabled = false;
+            btn.textContent = 'Buat Kode Baru';
+            const errEl = qs('#mfa-reg-err');
+            if (errEl) {
+              errEl.textContent = res.message || 'Gagal membuat kode cadangan';
+              errEl.style.display = 'block';
+            }
+          }
+        };
+      };
+
+      renderStatus();
     }
   }
 

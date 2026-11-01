@@ -18,6 +18,12 @@ Sistem mengadopsi pendekatan *Zero-Trust* dan pertahanan berlapis (*Defense-in-D
 ## 2. 🧱 Implementasi Hardening (Mitigasi Celah Keamanan)
 
 ### A. Autentikasi & Proteksi Akses (IAM)
+- **Multi-Factor Authentication (MFA / 2FA) Google Authenticator**:
+  - Arsitektur berbasis standar industri **RFC 6238 (TOTP - Time-Based One-Time Password)** dengan algoritma HMAC-SHA1 dan interval 30 detik (toleransi drift waktu ±30s).
+  - Alur login 2-langkah (*Two-Step Challenge*): Password benar -> Server menerbitkan tiket jangka pendek (`mfa_ticket`, kadaluarsa 5 menit) -> Wajib memasukkan 6-digit kode OTP dari aplikasi Google Authenticator sebelum JWT berhak akses penuh diterbitkan.
+  - **Rate Limiting Khusus MFA**: Endpoint `/api/auth/mfa/verify-login` dibatasi maksimal **5 percobaan per 10 menit per IP** untuk mencegah serangan brute-force terhadap 6-digit PIN.
+  - **Single-Use Emergency Backup Recovery Codes**: Menyediakan 8 kode cadangan sekali pakai (format `XXXX-XXXX`) yang disimpan dalam bentuk hash SHA-256. Setiap penggunaan kode cadangan otomatis menghanguskan kode tersebut dari database agar tidak dapat dipakai ulang.
+  - **Proteksi Penonaktifan MFA**: Menonaktifkan MFA wajib menyertakan verifikasi ganda (kata sandi admin + kode 6-digit aktif) untuk mencegah penonaktifan sepihak saat sesi browser tidak sengaja ditinggal terbuka.
 - **Anti Brute-Force Rate Limiting**:
   - Endpoint `/api/auth/login` dilindungi dengan pembatas percobaan: **maksimal 10 percobaan gagal per 15 menit per IP address**.
   - Jika ambang batas terlampaui, request otomatis ditolak dengan pesan peringatan dan status HTTP 429 (*Too Many Requests*).
