@@ -2,7 +2,6 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
-import QRCode from 'qrcode';
 import { getPool } from '../db.js';
 import { requireAuth, JWT_SECRET } from '../middleware/auth.js';
 import {
@@ -13,6 +12,14 @@ import {
   verifyBackupCode,
   generateOtpAuthUri
 } from '../utils/totp.js';
+
+let QRCode = null;
+try {
+  const qrMod = await import('qrcode');
+  QRCode = qrMod.default || qrMod;
+} catch (e) {
+  console.warn('ℹ️ [AUTH] Package "qrcode" belum terinstall di server. Setup MFA akan menggunakan fallback kunci manual sampai "npm install" dijalankan.');
+}
 
 const router = express.Router();
 
@@ -201,11 +208,16 @@ router.post('/mfa/setup', requireAuth, async (req, res) => {
       issuer: 'PT Jidoka Result Indonesia'
     });
 
-    const qrSvg = await QRCode.toString(otpauthUri, {
-      type: 'svg',
-      margin: 2,
-      color: { dark: '#16336e', light: '#ffffff' }
-    });
+    let qrSvg = '';
+    if (QRCode && typeof QRCode.toString === 'function') {
+      qrSvg = await QRCode.toString(otpauthUri, {
+        type: 'svg',
+        margin: 2,
+        color: { dark: '#16336e', light: '#ffffff' }
+      });
+    } else {
+      qrSvg = '<div style="padding:24px 12px;background:#f8fafc;border:1px dashed var(--bdr);border-radius:8px;font-size:12px;color:var(--navy);text-align:center"><b>Gunakan Kunci Rahasia Manual di Bawah</b><br><span style="color:var(--mut);font-size:11px">Salin kunci manual untuk menambah akun di Google Authenticator.</span></div>';
+    }
 
     res.json({
       success: true,
