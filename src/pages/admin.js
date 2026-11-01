@@ -35,7 +35,7 @@ export function aDash() {
   return '<h3>Dashboard CMS</h3><div class="stat-mini" style="margin-top:16px">'
     + '<div><b>' + cnt('products') + '</b><span class="mini" style="display:block;margin-top:4px">Produk</span></div>'
     + '<div><b>' + cnt('news') + '</b><span class="mini" style="display:block;margin-top:4px">Berita</span></div>'
-    + '<div><b>' + cnt('resources') + '</b><span class="mini" style="display:block;margin-top:4px">Dokumen & Brosur</span></div>'
+    + '<div><b>' + cnt('resources') + '</b><span class="mini" style="display:block;margin-top:4px">Dokumen</span></div>'
     + '<div><b>' + cachedLeads.length + (newLeads ? ' <small style="color:var(--red);font-size:14px">(' + newLeads + ' baru)</small>' : '') + '</b><span class="mini" style="display:block;margin-top:4px">Pesan Masuk (RFQ)</span></div></div>'
     + '<p class="tiny" style="margin-top:18px">Pilih menu navigasi untuk mengelola konten website dan permohonan penawaran harga. Seluruh data tersimpan otomatis di database server.</p>';
 }
@@ -218,8 +218,8 @@ export function saveCaps(fd) {
 }
 
 export function aRes() {
-  return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h3>Dokumen & Brosur (' + dR().length + ')</h3><button class="btn btn-red btn-sm" id="addr">' + ic('plus') + ' Tambah Dokumen</button></div>'
-    + '<p class="tiny">Ditampilkan di halaman Dokumen & Brosur — pusat unduhan katalog produk dan profil resmi perusahaan.</p>'
+  return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h3>Dokumen (' + dR().length + ')</h3><button class="btn btn-red btn-sm" id="addr">' + ic('plus') + ' Tambah Dokumen</button></div>'
+    + '<p class="tiny">Ditampilkan di halaman Dokumen — pusat unduhan katalog produk dan profil resmi perusahaan.</p>'
     + dR().map((r, i) => '<div class="adm-row"><div><b>' + esc(L(r.name)) + '</b> <span class="mini">' + esc(r.meta) + ' · ' + esc(r.size) + '</span></div><div style="display:flex;gap:8px"><button class="btn btn-line btn-sm" data-re="' + i + '">' + ic('edit') + ' Edit</button><button class="btn btn-sm" style="color:var(--red);border:1.5px solid var(--red);border-radius:9px;padding:8px 12px" data-rd="' + i + '">' + ic('trash') + '</button></div></div>').join('')
     + '<div id="red"></div>';
 }
@@ -745,10 +745,10 @@ export function renderAdmin(tab, sub) {
     ['home-content', 'Konten Beranda'],
     ['products', 'Produk'],
     ['factory-quality', 'Pabrik & Mutu'],
-    ['way-corporate', 'Nilai & Profil Perusahaan'],
+    ['way-corporate', 'Budaya & Profil Perusahaan'],
     ['news', 'Berita & Aktivitas'],
     ['caps', 'Kapabilitas & Solusi'],
-    ['resources', 'Dokumen & Brosur'],
+    ['resources', 'Dokumen'],
     ['company', 'Kontak & Akses'],
     ['backup', 'Backup & Pulihkan']
   ];

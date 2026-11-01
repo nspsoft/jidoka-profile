@@ -5,7 +5,7 @@ import { ic } from '../components/icons.js';
 import { L } from '../i18n.js';
 
 export function renderQuality() {
-  return '<section class="page-hero">' + crumbs(null, L({ en: 'Quality', id: 'Standar Mutu' })) + '<div class="wrap"><h1>' + L({ en: 'Quality System', id: 'Sistem Manajemen Mutu' }) + '</h1><p class="lead">' + L({ en: 'Inspection, certification and improvement — a system, not a slogan.', id: 'Pengendalian mutu, kepatuhan sertifikasi, dan continuous improvement yang terintegrasi secara sistematis.' }) + '</p></div></section>'
+  return '<section class="page-hero">' + crumbs(null, L({ en: 'Quality', id: 'Mutu' })) + '<div class="wrap"><h1>' + L({ en: 'Quality System', id: 'Sistem Manajemen Mutu' }) + '</h1><p class="lead">' + L({ en: 'Inspection, certification and improvement — a system, not a slogan.', id: 'Pengendalian mutu, kepatuhan sertifikasi, dan continuous improvement yang terintegrasi secara sistematis.' }) + '</p></div></section>'
     + '<section class="sec"><div class="wrap"><p class="qquote reveal">' + L({ en: 'We do not inspect quality into products. We build quality into the process — and we prove it with data.', id: 'Kualitas bukan sekadar diperiksa di akhir, melainkan dibangun langsung ke dalam setiap tahapan proses produksi berbasis data terukur.' }) + '</p>'
     + '<div class="stages">'
     + '<div class="stage reveal"><span class="sn">STAGE 01</span><h3>' + L({ en: 'Incoming Check', id: 'Pemeriksaan Bahan Baku (Incoming)' }) + '</h3><p>' + L({ en: 'Raw material verified by lot: paper board grade, resin grade, dimension and moisture — before release to production.', id: 'Bahan baku diverifikasi ketat per lot: grade lembaran, grade resin, dimensi, dan kadar air — sebelum dialirkan ke lantai produksi.' }) + '</p></div>'

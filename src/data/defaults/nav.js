@@ -29,12 +29,12 @@ export const NAV = [
       return prods.map(x => '<a href="#/product/' + esc(x.id) + '">' + esc(x.name) + '</a>').join('') + '<a class="dd-all" href="#/products">' + L({ en: 'All products', id: 'Semua produk' }) + ' →</a>';
     }
   },
-  { p: 'application', l: { en: 'Application', id: 'Solusi Industri' } },
-  { p: 'manufacturing', l: { en: 'Manufacturing', id: 'Pabrik & Produksi' } },
-  { p: 'quality', l: { en: 'Quality', id: 'Standar Mutu' } },
-  { p: 'way', l: { en: 'Our Way', id: 'Our Way' } },
-  { p: 'corporate', l: { en: 'Corporate', id: 'Profil Perusahaan' } },
+  { p: 'application', l: { en: 'Application', id: 'Solusi' } },
+  { p: 'manufacturing', l: { en: 'Manufacturing', id: 'Produksi' } },
+  { p: 'quality', l: { en: 'Quality', id: 'Mutu' } },
+  { p: 'way', l: { en: 'Our Way', id: 'Budaya Kerja' } },
+  { p: 'corporate', l: { en: 'Corporate', id: 'Tentang Kami' } },
   { p: 'partnership', l: { en: 'Partnership', id: 'Kemitraan' } },
-  { p: 'resources', l: { en: 'Resources', id: 'Dokumen & Brosur' } },
+  { p: 'resources', l: { en: 'Resources', id: 'Dokumen' } },
   { p: 'contact', l: { en: 'Contact', id: 'Kontak' } }
 ];
