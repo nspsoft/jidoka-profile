@@ -56,7 +56,8 @@ export function dbWrite(d) {
 
 // In-memory cache for ultra-fast sync access by renderers
 const localStored = dbRead();
-let memCache = { ...DEF, ...localStored };
+if (localStored.nav) delete localStored.nav;
+let memCache = { ...DEF, ...localStored, nav: NAV };
 let isRemote = false;
 
 export function getIsRemote() {
@@ -71,7 +72,8 @@ export async function initData() {
       const json = await res.json();
       if (json.success && json.data && Object.keys(json.data).length > 0) {
         isRemote = true;
-        memCache = { ...DEF, ...json.data };
+        if (json.data.nav) delete json.data.nav;
+        memCache = { ...DEF, ...json.data, nav: NAV };
         // Sync to local storage for offline fallback
         dbWrite(memCache);
         return { remote: true, count: Object.keys(json.data).length };
@@ -82,7 +84,9 @@ export async function initData() {
   }
 
   isRemote = false;
-  memCache = { ...DEF, ...dbRead() };
+  const stored = dbRead();
+  if (stored.nav) delete stored.nav;
+  memCache = { ...DEF, ...stored, nav: NAV };
   return { remote: false };
 }
 
@@ -172,6 +176,6 @@ export const dMach = () => DB.get('mach');
 export const dFlow = () => DB.get('flow');
 export const dPillars = () => DB.get('pillars');
 export const dWhy = () => DB.get('why');
-export const dNav = () => DB.get('nav');
+export const dNav = () => NAV;
 
 export { PRODUCTS, NEWS, CAPS, RES, CO, TOUR, WAY, HIST, GOV, CERTS, INDUSTRIES, MACH, FLOW, PILLARS, WHY, NAV };
