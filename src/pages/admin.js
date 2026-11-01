@@ -32,23 +32,23 @@ export function aDash() {
   const ov = Object.keys(st).filter(k => k !== 'settings').length;
   const cnt = k => (st[k] !== undefined ? st[k] : DEF[k]).length;
   const newLeads = cachedLeads.filter(l => l.status === 'new').length;
-  return '<h3>Dashboard</h3><div class="stat-mini" style="margin-top:16px">'
+  return '<h3>Dashboard CMS</h3><div class="stat-mini" style="margin-top:16px">'
     + '<div><b>' + cnt('products') + '</b><span class="mini" style="display:block;margin-top:4px">Produk</span></div>'
     + '<div><b>' + cnt('news') + '</b><span class="mini" style="display:block;margin-top:4px">Berita</span></div>'
-    + '<div><b>' + cnt('resources') + '</b><span class="mini" style="display:block;margin-top:4px">Resources</span></div>'
-    + '<div><b>' + cachedLeads.length + (newLeads ? ' <small style="color:var(--red);font-size:14px">(' + newLeads + ' baru)</small>' : '') + '</b><span class="mini" style="display:block;margin-top:4px">Inbox Leads</span></div></div>'
-    + '<p class="tiny" style="margin-top:18px">Pilih menu di sebelah kiri untuk mengelola konten dan pesan masuk. Data tersimpan di database server (PRD §5, §6 M2).</p>';
+    + '<div><b>' + cnt('resources') + '</b><span class="mini" style="display:block;margin-top:4px">Dokumen & Brosur</span></div>'
+    + '<div><b>' + cachedLeads.length + (newLeads ? ' <small style="color:var(--red);font-size:14px">(' + newLeads + ' baru)</small>' : '') + '</b><span class="mini" style="display:block;margin-top:4px">Pesan Masuk (RFQ)</span></div></div>'
+    + '<p class="tiny" style="margin-top:18px">Pilih menu navigasi untuk mengelola konten website dan permohonan penawaran harga. Seluruh data tersimpan otomatis di database server.</p>';
 }
 
 export function aInbox() {
   if (!cachedLeads.length) {
-    return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h3>Inbox Leads (0)</h3><button class="btn btn-line btn-sm" id="refinbox">↻ Refresh</button></div>'
-      + '<p class="tiny">Daftar pesan & RFQ masuk dari formulir kontak website (PRD §5, §6 M2).</p>'
+    return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h3>Pesan Masuk (RFQ) (0)</h3><button class="btn btn-line btn-sm" id="refinbox">↻ Refresh</button></div>'
+      + '<p class="tiny">Daftar permintaan penawaran harga (RFQ) dan pesan pelanggan dari formulir website.</p>'
       + '<p class="empty" style="padding:40px 0;text-align:center">Belum ada pesan atau RFQ masuk.</p>';
   }
 
   const unhandled = cachedLeads.filter(l => l.status === 'new').length;
-  return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h3>Inbox Leads (' + cachedLeads.length + (unhandled ? ' · <span style="color:var(--red)">' + unhandled + ' Baru</span>' : '') + ')</h3><button class="btn btn-line btn-sm" id="refinbox">↻ Refresh</button></div>'
+  return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h3>Pesan Masuk (RFQ) (' + cachedLeads.length + (unhandled ? ' · <span style="color:var(--red)">' + unhandled + ' Baru</span>' : '') + ')</h3><button class="btn btn-line btn-sm" id="refinbox">↻ Refresh</button></div>'
     + '<p class="tiny">Klik salah satu baris untuk melihat detail spesifikasi RFQ / pesan pelanggan.</p>'
     + cachedLeads.map(l => {
       const p = l.payload || {};
@@ -167,7 +167,7 @@ export function saveProd(fd) {
 
 export function aNews() {
   return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h3>Berita & Aktivitas (' + dN().length + ')</h3><button class="btn btn-red btn-sm" id="addn">' + ic('plus') + ' Tambah Berita</button></div>'
-    + '<p class="tiny">Ditampilkan di beranda (bagian News) — indikator perusahaan aktif (PRD §8).</p>'
+    + '<p class="tiny">Ditampilkan di beranda (bagian Berita) — pembaruan kegiatan dan pengumuman resmi perusahaan.</p>'
     + dN().map((n, i) => '<div class="adm-row"><div><b>' + esc(L(n.t)) + '</b> <span class="mini">' + esc(n.date) + ' · ' + esc(L(n.cat)) + '</span></div><div style="display:flex;gap:8px"><button class="btn btn-line btn-sm" data-ne="' + i + '">' + ic('edit') + ' Edit</button><button class="btn btn-sm" style="color:var(--red);border:1.5px solid var(--red);border-radius:9px;padding:8px 12px" data-nd="' + i + '">' + ic('trash') + '</button></div></div>').join('')
     + '<div id="ned"></div>';
 }
@@ -200,7 +200,7 @@ export function saveNews(fd) {
 
 export function aCaps() {
   const c = dC();
-  return '<h3>Data Kapabilitas</h3><p class="tiny">Ditampilkan di beranda — bagian “Our capabilities” (PRD §10: data numerik kapabilitas).</p>'
+  return '<h3>Data Kapabilitas Pabrik</h3><p class="tiny">Ditampilkan di beranda — bagian parameter dan indikator riil kapasitas produksi pabrik.</p>'
     + '<form id="cform" class="form" style="margin-top:14px">'
     + c.stats.map((x, i) => '<div class="f f-full" style="border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px"><b style="grid-column:1/-1;font:700 12px \'Barlow\';letter-spacing:.1em;color:var(--mut)">STATISTIK ' + (i + 1) + '</b>'
       + '<input name="v' + i + '" value="' + esc(x[0]) + '" placeholder="Nilai (mis. 3,000)"><input name="s' + i + '" value="' + esc(x[1] || '') + '" placeholder="Suffix (mis. +)">'
@@ -218,8 +218,8 @@ export function saveCaps(fd) {
 }
 
 export function aRes() {
-  return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h3>Resources (' + dR().length + ')</h3><button class="btn btn-red btn-sm" id="addr">' + ic('plus') + ' Tambah Dokumen</button></div>'
-    + '<p class="tiny">Ditampilkan di halaman Resources — pusat dokumen download (PRD §7.9).</p>'
+  return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h3>Dokumen & Brosur (' + dR().length + ')</h3><button class="btn btn-red btn-sm" id="addr">' + ic('plus') + ' Tambah Dokumen</button></div>'
+    + '<p class="tiny">Ditampilkan di halaman Dokumen & Brosur — pusat unduhan katalog produk dan profil resmi perusahaan.</p>'
     + dR().map((r, i) => '<div class="adm-row"><div><b>' + esc(L(r.name)) + '</b> <span class="mini">' + esc(r.meta) + ' · ' + esc(r.size) + '</span></div><div style="display:flex;gap:8px"><button class="btn btn-line btn-sm" data-re="' + i + '">' + ic('edit') + ' Edit</button><button class="btn btn-sm" style="color:var(--red);border:1.5px solid var(--red);border-radius:9px;padding:8px 12px" data-rd="' + i + '">' + ic('trash') + '</button></div></div>').join('')
     + '<div id="red"></div>';
 }
@@ -280,7 +280,7 @@ export function aProfile() {
   };
 
   return '<h3>Profil & Logo Perusahaan</h3>'
-    + '<p class="tiny">Kelola logo visual perusahaan, teks brand header/footer, slogan, tagline, dan profil resmi bisnis (PRD §5, §6 M2).</p>'
+    + '<p class="tiny">Kelola logo visual perusahaan, teks brand header/footer, slogan, tagline, dan profil resmi bisnis.</p>'
     + '<div class="logo-preview-box" id="logopreviewbox">'
     + previewDisplay('light')
     + previewDisplay('dark')
@@ -451,7 +451,7 @@ export function aHomeContent(sub) {
   if (sub === 'hero') {
     const co = dCo() || {};
     return '<h3>Konten Beranda — Banner Hero & Background</h3>'
-      + '<p class="tiny">Kelola video latar belakang dan intensitas cahaya/kecerahan background pada banner utama Beranda (PRD §7.1).</p>'
+      + '<p class="tiny">Kelola video latar belakang dan intensitas pencahayaan pada banner utama Beranda.</p>'
       + subnav
       + '<form id="heroform" class="form" style="margin-top:14px">'
       + fVideoHeroBlock(co.video)
@@ -462,7 +462,7 @@ export function aHomeContent(sub) {
   if (sub === 'pillars') {
     const P = dPillars() || [];
     return '<h3>Konten Beranda — 4 Pilar Layanan</h3>'
-      + '<p class="tiny">Ditampilkan di bagian "What we do" pada Beranda (PRD §7.1). Setiap pilar memiliki nomor urut, ikon, judul, dan deskripsi bilingual.</p>'
+      + '<p class="tiny">Ditampilkan di bagian "Fokus Solusi Kami" pada Beranda. Setiap pilar memiliki nomor urut, ikon, judul, dan deskripsi bilingual.</p>'
       + subnav
       + '<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-red btn-sm" id="addpillar">' + ic('plus') + ' Tambah Pilar</button></div>'
       + P.map((p, i) => '<div class="adm-row"><div><b>' + esc(p.n) + '. ' + esc(L(p.t)) + '</b> <span class="mini">(' + esc(p.i) + ') — ' + esc(L(p.d)).slice(0, 80) + '…</span></div><div style="display:flex;gap:8px"><button class="btn btn-line btn-sm" data-pe-pillar="' + i + '">' + ic('edit') + ' Edit</button><button class="btn btn-sm" style="color:var(--red);border:1.5px solid var(--red);border-radius:9px;padding:8px 12px" data-pd-pillar="' + i + '">' + ic('trash') + '</button></div></div>').join('')
@@ -471,8 +471,8 @@ export function aHomeContent(sub) {
 
   if (sub === 'why') {
     const W = dWhy() || [];
-    return '<h3>Konten Beranda — 4 Alasan Memilih JRI</h3>'
-      + '<p class="tiny">Ditampilkan di bagian "Why us" pada Beranda (PRD §7.1). Menampilkan poin keunggulan utama perusahaan.</p>'
+    return '<h3>Konten Beranda — Keunggulan JRI</h3>'
+      + '<p class="tiny">Ditampilkan di bagian "Keunggulan Kami" pada Beranda. Menampilkan poin keunggulan utama perusahaan.</p>'
       + subnav
       + '<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-red btn-sm" id="addwhy">' + ic('plus') + ' Tambah Alasan</button></div>'
       + W.map((w, i) => '<div class="adm-row"><div><b>' + esc(L(w.t)) + '</b> <span class="mini">(' + esc(w.i) + ') — ' + esc(L(w.d)).slice(0, 80) + '…</span></div><div style="display:flex;gap:8px"><button class="btn btn-line btn-sm" data-pe-why="' + i + '">' + ic('edit') + ' Edit</button><button class="btn btn-sm" style="color:var(--red);border:1.5px solid var(--red);border-radius:9px;padding:8px 12px" data-pd-why="' + i + '">' + ic('trash') + '</button></div></div>').join('')
@@ -481,8 +481,8 @@ export function aHomeContent(sub) {
 
   if (sub === 'industries') {
     const IND = dIndustries() || [];
-    return '<h3>Konten Beranda & Aplikasi — Sektor Industri</h3>'
-      + '<p class="tiny">Ditampilkan di Beranda dan Halaman Application (PRD §7.3). Mengelompokkan solusi kemasan per sektor bisnis.</p>'
+    return '<h3>Konten Beranda & Solusi Industri</h3>'
+      + '<p class="tiny">Ditampilkan di Beranda dan Halaman Solusi Industri. Mengelompokkan solusi kemasan per sektor bisnis.</p>'
       + subnav
       + '<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-red btn-sm" id="addind">' + ic('plus') + ' Tambah Industri</button></div>'
       + IND.map((ind, i) => '<div class="adm-row"><div><b>' + esc(L(ind.name)) + '</b> ' + (ind.jp ? '<span class="mini">[' + esc(ind.jp) + ']</span> ' : '') + '<span class="mini">/' + esc(ind.id) + ' · ' + esc(L(ind.d)).slice(0, 70) + '…</span></div><div style="display:flex;gap:8px"><button class="btn btn-line btn-sm" data-pe-ind="' + i + '">' + ic('edit') + ' Edit</button><button class="btn btn-sm" style="color:var(--red);border:1.5px solid var(--red);border-radius:9px;padding:8px 12px" data-pd-ind="' + i + '">' + ic('trash') + '</button></div></div>').join('')
@@ -546,7 +546,7 @@ export function aFactoryQuality(sub) {
   if (sub === 'tour') {
     const T = dTour() || [];
     return '<h3>Pabrik & Mutu — Digital Factory Tour</h3>'
-      + '<p class="tiny">Ditampilkan di Beranda & Halaman Manufacturing (PRD §7.4). Menggambarkan 5 tahapan tur fasilitas pabrik dengan video interaktif & diagram cetak biru.</p>'
+      + '<p class="tiny">Ditampilkan di Beranda & Halaman Pabrik & Produksi. Menggambarkan 5 tahapan tur fasilitas pabrik dengan video interaktif & diagram cetak biru.</p>'
       + subnav
       + '<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-red btn-sm" id="addtour">' + ic('plus') + ' Tambah Tahap Tur</button></div>'
       + T.map((t, i) => '<div class="adm-row"><div><b>' + esc(t.n) + '. ' + esc(L(t.name)) + '</b> ' + (t.jp ? '<span class="mini">[' + esc(t.jp) + ']</span> ' : '') + (t.video ? '<span class="mini" style="background:#0e2350;color:#7ee2a8;font-weight:700;border-radius:6px;padding:3px 8px;margin-left:6px;display:inline-flex;align-items:center;gap:4px">' + ic('play') + ' Video</span> ' : '') + '<span class="mini">— ' + esc(L(t.d)).slice(0, 60) + '…</span></div><div style="display:flex;gap:8px"><button class="btn btn-line btn-sm" data-pe-tour="' + i + '">' + ic('edit') + ' Edit</button><button class="btn btn-sm" style="color:var(--red);border:1.5px solid var(--red);border-radius:9px;padding:8px 12px" data-pd-tour="' + i + '">' + ic('trash') + '</button></div></div>').join('')
@@ -576,7 +576,7 @@ export function aFactoryQuality(sub) {
   if (sub === 'certs') {
     const C = dCerts() || [];
     return '<h3>Pabrik & Mutu — Sertifikasi & Standar Mutu</h3>'
-      + '<p class="tiny">Ditampilkan di Halaman Quality (PRD §7.5). Daftar sertifikasi ISO, standar internal, dan persetujuan customer.</p>'
+      + '<p class="tiny">Ditampilkan di Halaman Standar Mutu. Daftar sertifikasi ISO, standar internal, dan persetujuan pelanggan industri.</p>'
       + subnav
       + '<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-red btn-sm" id="addcert">' + ic('plus') + ' Tambah Sertifikasi</button></div>'
       + C.map((c, i) => '<div class="adm-row"><div><b>' + esc(L(c.name)) + '</b> <span class="mini">— ' + esc(L(c.d)).slice(0, 80) + '…</span></div><div style="display:flex;gap:8px"><button class="btn btn-line btn-sm" data-pe-cert="' + i + '">' + ic('edit') + ' Edit</button><button class="btn btn-sm" style="color:var(--red);border:1.5px solid var(--red);border-radius:9px;padding:8px 12px" data-pd-cert="' + i + '">' + ic('trash') + '</button></div></div>').join('')
@@ -654,8 +654,8 @@ export function aWayCorporate(sub) {
 
   if (sub === 'way') {
     const W = dWay() || [];
-    return '<h3>Our Way & Korporat — 7 Prinsip DNA Jepang</h3>'
-      + '<p class="tiny">Ditampilkan di Halaman Our Way & Beranda (PRD §7.6). Fondasi filosofi manufaktur Jepang (Kaizen, 5S, Jidoka, dll).</p>'
+    return '<h3>Nilai & Profil Perusahaan — 7 Prinsip Budaya Jepang</h3>'
+      + '<p class="tiny">Ditampilkan di Halaman Our Way & Beranda. Fondasi etos kerja dan filosofi manufaktur Jepang (Kaizen, 5S, Jidoka, dll).</p>'
       + subnav
       + '<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-red btn-sm" id="addwayp">' + ic('plus') + ' Tambah Prinsip</button></div>'
       + W.map((w, i) => '<div class="adm-row"><div><b>' + esc(w.n) + '</b> ' + (w.kj ? '<span class="mini">[' + esc(w.kj) + ']</span> ' : '') + '<span class="mini">— ' + esc(L(w.s)) + '</span></div><div style="display:flex;gap:8px"><button class="btn btn-line btn-sm" data-pe-wayp="' + i + '">' + ic('edit') + ' Edit</button><button class="btn btn-sm" style="color:var(--red);border:1.5px solid var(--red);border-radius:9px;padding:8px 12px" data-pd-wayp="' + i + '">' + ic('trash') + '</button></div></div>').join('')
@@ -664,8 +664,8 @@ export function aWayCorporate(sub) {
 
   if (sub === 'hist') {
     const H = dHist() || [];
-    return '<h3>Our Way & Korporat — Linimasa Sejarah Perusahaan</h3>'
-      + '<p class="tiny">Ditampilkan di Halaman Corporate (PRD §7.7). Tonggak sejarah pendirian dan ekspansi PT JRI.</p>'
+    return '<h3>Nilai & Profil Perusahaan — Linimasa Sejarah Perusahaan</h3>'
+      + '<p class="tiny">Ditampilkan di Halaman Profil Perusahaan. Tonggak sejarah pendirian dan ekspansi PT JRI.</p>'
       + subnav
       + '<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-red btn-sm" id="addhist">' + ic('plus') + ' Tambah Tahun</button></div>'
       + H.map((h, i) => '<div class="adm-row"><div><b>Tahun ' + esc(h.yr) + '</b> <span class="mini">— ' + esc(L(h.t)).slice(0, 80) + '…</span></div><div style="display:flex;gap:8px"><button class="btn btn-line btn-sm" data-pe-hist="' + i + '">' + ic('edit') + ' Edit</button><button class="btn btn-sm" style="color:var(--red);border:1.5px solid var(--red);border-radius:9px;padding:8px 12px" data-pd-hist="' + i + '">' + ic('trash') + '</button></div></div>').join('')
@@ -674,8 +674,8 @@ export function aWayCorporate(sub) {
 
   if (sub === 'gov') {
     const G = dGov() || [];
-    return '<h3>Our Way & Korporat — Tata Kelola Perusahaan (Governance)</h3>'
-      + '<p class="tiny">Ditampilkan di Halaman Corporate (PRD §7.7). Poin komitmen tata kelola dan kepatuhan regulasi.</p>'
+    return '<h3>Nilai & Profil Perusahaan — Tata Kelola Perusahaan (Governance)</h3>'
+      + '<p class="tiny">Ditampilkan di Halaman Profil Perusahaan. Poin komitmen tata kelola dan kepatuhan regulasi.</p>'
       + subnav
       + '<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-red btn-sm" id="addgov">' + ic('plus') + ' Tambah Poin</button></div>'
       + G.map((g, i) => '<div class="adm-row"><div><b>' + (i + 1) + '. ' + esc(L(g)).slice(0, 90) + '…</b></div><div style="display:flex;gap:8px"><button class="btn btn-line btn-sm" data-pe-gov="' + i + '">' + ic('edit') + ' Edit</button><button class="btn btn-sm" style="color:var(--red);border:1.5px solid var(--red);border-radius:9px;padding:8px 12px" data-pd-gov="' + i + '">' + ic('trash') + '</button></div></div>').join('')
@@ -715,8 +715,8 @@ export function aGovForm(i) {
 }
 
 export function aBackup() {
-  return '<h3>Backup / Restore</h3>'
-    + '<p class="tiny">Data CMS tersimpan di database server. Format data 100% kompatibel dengan cadangan lama REV-6 (PRD §5). Gunakan <b>Muat JSON</b> untuk restore cadangan lama atau eksternal.</p>'
+  return '<h3>Cadangkan & Pulihkan (Backup / Restore)</h3>'
+    + '<p class="tiny">Seluruh data CMS tersimpan aman di database server. Gunakan fitur ekspor/impor JSON untuk mengelola cadangan berkala atau migrasi data.</p>'
     + '<textarea id="expj" class="tj" style="margin:14px 0 10px" readonly>' + esc(JSON.stringify(dbRead(), null, 2)) + '</textarea>'
     + '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:26px"><button class="btn btn-line btn-sm" id="dlj">' + ic('download') + ' Download JSON</button><button class="btn btn-line btn-sm" id="cpj">Salin</button></div>'
     + '<h4 class="redlbl">Import / Muat JSON</h4>'
@@ -730,7 +730,7 @@ export function renderAdmin(tab, sub) {
   if (!isLogged()) {
     return '<section class="sec" style="padding-top:48px"><div class="wrap" style="max-width:430px"><div class="panel-card">'
       + '<h3 style="font-family:\'Barlow Condensed\';font-size:26px;text-transform:uppercase;color:var(--navy)">Login Admin CMS</h3>'
-      + '<p class="tiny" style="margin:6px 0 16px">Autentikasi akun admin server (PRD §5, §6 M2).<br>Default: <b>admin@jidoka.co.id</b> / <b>jidoka2026</b></p>'
+      + '<p class="tiny" style="margin:6px 0 16px">Autentikasi akun admin server.<br>Default: <b>admin@jidoka.co.id</b> / <b>jidoka2026</b></p>'
       + '<form id="lform" class="form" style="grid-template-columns:1fr">'
       + '<div class="f"><label>Email</label><input name="email" type="email" value="admin@jidoka.co.id" required></div>'
       + '<div class="f"><label>Password</label><div class="pw-wrap"><input name="pw" id="lpw" type="password" required autocomplete="current-password"><button type="button" class="pw-toggle" id="lpwtoggle" aria-label="Lihat / Sembunyikan Password" tabindex="-1">' + ic('eye') + '</button></div><div class="err" id="lerr">Email atau password salah</div></div>'
@@ -740,17 +740,17 @@ export function renderAdmin(tab, sub) {
   const unhandled = cachedLeads.filter(l => l.status === 'new').length;
   const tabs = [
     ['dash', 'Dashboard'],
-    ['inbox', 'Inbox' + (unhandled ? ' (' + unhandled + ')' : '')],
+    ['inbox', 'Pesan Masuk (RFQ)' + (unhandled ? ' (' + unhandled + ')' : '')],
     ['profile', 'Profil & Logo'],
     ['home-content', 'Konten Beranda'],
     ['products', 'Produk'],
     ['factory-quality', 'Pabrik & Mutu'],
-    ['way-corporate', 'Our Way & Korporat'],
+    ['way-corporate', 'Nilai & Profil Perusahaan'],
     ['news', 'Berita & Aktivitas'],
-    ['caps', 'Kapabilitas'],
-    ['resources', 'Resources'],
+    ['caps', 'Kapabilitas & Solusi'],
+    ['resources', 'Dokumen & Brosur'],
     ['company', 'Kontak & Akses'],
-    ['backup', 'Backup / Restore']
+    ['backup', 'Backup & Pulihkan']
   ];
   let body = '';
   try {
@@ -1026,7 +1026,7 @@ export function mountAdmin(seg, router, goHash) {
     fetchLeads().then(() => {
       const unh = cachedLeads.filter(l => l.status === 'new').length;
       const ibBtn = qs('.adm-nav [data-at="inbox"]');
-      if (ibBtn && unh) ibBtn.textContent = 'Inbox (' + unh + ')';
+      if (ibBtn && unh) ibBtn.textContent = 'Pesan Masuk (RFQ) (' + unh + ')';
     });
   }
 
@@ -1050,7 +1050,7 @@ export function mountAdmin(seg, router, goHash) {
     if (refb) {
       refb.onclick = async () => {
         await fetchLeads();
-        toast('Inbox diperbarui');
+        toast('Data pesan masuk diperbarui');
         router(true);
       };
     }

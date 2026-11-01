@@ -9,15 +9,15 @@ import { L } from '../i18n.js';
 export function renderProducts(f) {
   f = f || 'all';
   const filters = [
-    ['all', { en: 'All products', id: 'Semua produk' }],
-    ['corrugated', { en: 'Corrugated', id: 'Korugasi' }],
-    ['pp', { en: 'PP board', id: 'Papan PP' }],
-    ['custom', { en: 'Custom', id: 'Kustom' }],
-    ['film', { en: 'Film & sheet', id: 'Film & Lembaran' }]
+    ['all', { en: 'All products', id: 'Semua Produk' }],
+    ['corrugated', { en: 'Corrugated', id: 'Karton Box & Korugasi' }],
+    ['pp', { en: 'PP board', id: 'Imprabox & PP Board' }],
+    ['custom', { en: 'Custom', id: 'Partisi & Kustom' }],
+    ['film', { en: 'Film & sheet', id: 'Film & Lembaran PE' }]
   ];
-  return '<section class="page-hero">' + crumbs(null, L({ en: 'Products', id: 'Produk' })) + '<div class="wrap"><h1>' + L({ en: 'Products', id: 'Produk' }) + '</h1><p class="lead">' + L({ en: 'A technical catalogue — not a brochure. Every page answers what an engineer or buyer needs to know.', id: 'Katalog teknis — bukan brosur. Setiap halaman menjawab hal yang perlu diketahui engineer maupun buyer.' }) + '</p></div></section>'
+  return '<section class="page-hero">' + crumbs(null, L({ en: 'Products', id: 'Produk' })) + '<div class="wrap"><h1>' + L({ en: 'Products', id: 'Katalog Produk Kemasan' }) + '</h1><p class="lead">' + L({ en: 'A technical catalogue — not a brochure. Every page answers what an engineer or buyer needs to know.', id: 'Katalog spesifikasi teknis lengkap untuk memenuhi kebutuhan engineer manufaktur dan procurement industri.' }) + '</p></div></section>'
     + '<section class="sec" style="padding-top:8px"><div class="wrap">'
-    + '<div class="toolbar"><div class="search">' + ic('search') + '<input id="pq" placeholder="' + L({ en: 'Search material, application or keyword…', id: 'Cari material, aplikasi, atau kata kunci…' }) + '"></div>'
+    + '<div class="toolbar"><div class="search">' + ic('search') + '<input id="pq" placeholder="' + L({ en: 'Search material, application or keyword…', id: 'Cari material, sektor aplikasi, atau kata kunci…' }) + '"></div>'
     + filters.map(x => '<button class="chip ' + (f === x[0] ? 'on' : '') + '" data-f="' + x[0] + '">' + L(x[1]) + '</button>').join('') + '</div>'
     + '<div class="grid3" id="pgrid">' + dP().map(pcard).join('') + '</div></div></section>' + ctaBand();
 }

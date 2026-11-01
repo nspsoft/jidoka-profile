@@ -15,6 +15,6 @@ export const pcard = p => {
     + '<span class="cat">' + esc(L(p.cat)) + '</span>'
     + '<h3>' + esc(p.name) + '</h3>'
     + '<p>' + esc(L(p.lead)) + '</p>'
-    + '<span class="more">' + L({ en: 'View detail', id: 'Lihat detail' }) + ' ' + ic('arrow') + '</span>'
+    + '<span class="more">' + L({ en: 'View detail', id: 'Lihat Detail' }) + ' ' + ic('arrow') + '</span>'
     + '</div></a>';
 };

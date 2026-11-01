@@ -1,4 +1,4 @@
-﻿import { PRODUCTS } from './products.js';
+import { PRODUCTS } from './products.js';
 
 const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const getLang = () => {
@@ -29,12 +29,12 @@ export const NAV = [
       return prods.map(x => '<a href="#/product/' + esc(x.id) + '">' + esc(x.name) + '</a>').join('') + '<a class="dd-all" href="#/products">' + L({ en: 'All products', id: 'Semua produk' }) + ' →</a>';
     }
   },
-  { p: 'application', l: { en: 'Application', id: 'Aplikasi' } },
-  { p: 'manufacturing', l: { en: 'Manufacturing', id: 'Manufaktur' } },
-  { p: 'quality', l: { en: 'Quality', id: 'Kualitas' } },
+  { p: 'application', l: { en: 'Application', id: 'Solusi Industri' } },
+  { p: 'manufacturing', l: { en: 'Manufacturing', id: 'Pabrik & Produksi' } },
+  { p: 'quality', l: { en: 'Quality', id: 'Standar Mutu' } },
   { p: 'way', l: { en: 'Our Way', id: 'Our Way' } },
-  { p: 'corporate', l: { en: 'Corporate', id: 'Korporat' } },
+  { p: 'corporate', l: { en: 'Corporate', id: 'Profil Perusahaan' } },
   { p: 'partnership', l: { en: 'Partnership', id: 'Kemitraan' } },
-  { p: 'resources', l: { en: 'Resources', id: 'Sumber Daya' } },
+  { p: 'resources', l: { en: 'Resources', id: 'Dokumen & Brosur' } },
   { p: 'contact', l: { en: 'Contact', id: 'Kontak' } }
 ];

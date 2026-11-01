@@ -10,22 +10,22 @@ export function renderContact(tab) {
   tab = tab || 'rfq';
   const co = dCo();
   const tabs = [
-    ['rfq', { en: 'Request Quotation', id: 'Minta Penawaran' }],
-    ['product', { en: 'Product Inquiry', id: 'Pertanyaan Produk' }],
-    ['corporate', { en: 'Corporate Inquiry', id: 'Pertanyaan Korporat' }]
+    ['rfq', { en: 'Request Quotation (RFQ)', id: 'Permintaan Penawaran (RFQ)' }],
+    ['product', { en: 'Product Inquiry', id: 'Konsultasi Produk' }],
+    ['corporate', { en: 'Corporate Inquiry', id: 'Kemitraan & Hubungan Korporat' }]
   ];
   const mapQuery = (co.mapQuery || co.addr || 'Kawasan Industri Jababeka II, Cikarang, Bekasi').trim();
   const mapEmbedUrl = (co.mapEmbed || '').trim() || ('https://maps.google.com/maps?q=' + encodeURIComponent(mapQuery) + '&t=&z=14&ie=UTF8&iwloc=&output=embed');
   const directMapsLink = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(mapQuery);
   const mapLabel = co.mapLabel || 'Jababeka II — Cikarang, Bekasi';
 
-  return '<section class="page-hero">' + crumbs(null, L({ en: 'Contact', id: 'Kontak' })) + '<div class="wrap"><h1>' + L({ en: 'Contact us', id: 'Hubungi kami' }) + '</h1><p class="lead">' + L({ en: 'Three separate channels so every lead reaches the right person inside Jidoka.', id: 'Tiga jalur terpisah agar setiap lead sampai ke pihak internal Jidoka yang tepat.' }) + '</p></div></section>'
+  return '<section class="page-hero">' + crumbs(null, L({ en: 'Contact', id: 'Kontak' })) + '<div class="wrap"><h1>' + L({ en: 'Contact Us', id: 'Hubungi Kami' }) + '</h1><p class="lead">' + L({ en: 'Three separate channels so every lead reaches the right person inside Jidoka.', id: 'Saluran komunikasi terarah agar setiap pertanyaan dan permintaan penawaran langsung ditangani oleh divisi terkait.' }) + '</p></div></section>'
     + '<section class="sec"><div class="wrap ct-grid"><div><div class="info-card">'
-    + '<div class="ic-row">' + ic('mail') + '<div><b>' + L({ en: 'Sales (general & RFQ)', id: 'Sales (umum & RFQ)' }) + '</b><span>' + esc(co.sales) + '</span></div></div>'
-    + '<div class="ic-row">' + ic('link') + '<div><b>' + L({ en: 'Corporate Development (investor / holding)', id: 'Corporate Development (investor / holding)' }) + '</b><span>' + esc(co.corp) + '</span></div></div>'
-    + '<div class="ic-row">' + ic('phone') + '<div><b>' + L({ en: 'Phone / WhatsApp', id: 'Telepon / WhatsApp'}) + '</b><span>' + esc(co.phone) + ' <small>[to be confirmed]</small></span></div></div>'
-    + '<div class="ic-row">' + ic('pin') + '<div><b>' + L({ en: 'Factory & Office', id: 'Pabrik & Kantor' }) + '</b><span>' + esc(co.addr) + '</span></div></div>'
-    + '<div class="ic-row">' + ic('clock') + '<div><b>' + L({ en: 'Response time', id: 'Waktu respons' }) + '</b><span>' + L({ en: 'Within 1 business day', id: 'Dalam 1 hari kerja' }) + '</span></div></div>'
+    + '<div class="ic-row">' + ic('mail') + '<div><b>' + L({ en: 'Sales (general & RFQ)', id: 'Departemen Penjualan (RFQ & Sales)' }) + '</b><span>' + esc(co.sales) + '</span></div></div>'
+    + '<div class="ic-row">' + ic('link') + '<div><b>' + L({ en: 'Corporate Development (investor / holding)', id: 'Pengembangan Bisnis & Hubungan Korporat' }) + '</b><span>' + esc(co.corp) + '</span></div></div>'
+    + '<div class="ic-row">' + ic('phone') + '<div><b>' + L({ en: 'Phone / WhatsApp', id: 'Telepon / WhatsApp Resmi'}) + '</b><span>' + esc(co.phone) + ' <small>[' + L({ en: 'to be confirmed', id: 'konfirmasi' }) + ']</small></span></div></div>'
+    + '<div class="ic-row">' + ic('pin') + '<div><b>' + L({ en: 'Factory & Office', id: 'Fasilitas Pabrik & Kantor' }) + '</b><span>' + esc(co.addr) + '</span></div></div>'
+    + '<div class="ic-row">' + ic('clock') + '<div><b>' + L({ en: 'Response time', id: 'Standar Waktu Respons' }) + '</b><span>' + L({ en: 'Within 1 business day', id: 'Maksimal 1 Hari Kerja' }) + '</span></div></div>'
     + '<div class="info-map-wrap">'
     + '<iframe title="' + esc(L({ en: 'Factory & Office Location Map', id: 'Peta Lokasi Pabrik & Kantor' })) + '" src="' + esc(mapEmbedUrl) + '" width="100%" height="230" style="border:0;display:block" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>'
     + '<div class="info-map-bar">'
@@ -65,18 +65,18 @@ export function mountContact(seg) {
         width: 'Width (mm)',
         length: 'Length (mm)',
         thick: 'Thickness (mm)',
-        qty: L({ en: 'Quantity', id: 'Quantity' }),
-        app: L({ en: 'Application', id: 'Aplikasi' }),
-        target: L({ en: 'Target delivery', id: 'Target pengiriman' }),
-        company: L({ en: 'Company', id: 'Perusahaan' }),
-        name: L({ en: 'Name', id: 'Nama' }),
+        qty: L({ en: 'Quantity (pcs)', id: 'Jumlah / Kuantitas (pcs)' }),
+        app: L({ en: 'Application', id: 'Sektor Penggunaan / Aplikasi' }),
+        target: L({ en: 'Target delivery', id: 'Target Jadwal Pengiriman' }),
+        company: L({ en: 'Company', id: 'Nama Perusahaan' }),
+        name: L({ en: 'PIC Name', id: 'Nama Lengkap (PIC)' }),
         email: 'Email',
-        phone: L({ en: 'Phone', id: 'Telepon' }),
-        org: L({ en: 'Organization', id: 'Organisasi' }),
-        topic: L({ en: 'Topic', id: 'Topik' }),
-        type: L({ en: 'Type', id: 'Jenis' }),
-        msg: L({ en: 'Message', id: 'Pesan' }),
-        notes: L({ en: 'Notes', id: 'Catatan' })
+        phone: L({ en: 'Phone / WA', id: 'No. Telepon / WhatsApp' }),
+        org: L({ en: 'Organization', id: 'Nama Organisasi / Perusahaan' }),
+        topic: L({ en: 'Topic', id: 'Topik Keperluan' }),
+        type: L({ en: 'Inquiry type', id: 'Kategori Keperluan' }),
+        msg: L({ en: 'Message', id: 'Pesan / Keterangan Kebutuhan' }),
+        notes: L({ en: 'Notes', id: 'Catatan Tambahan' })
       };
       const clean = {};
       Object.keys(d).forEach(k => {
