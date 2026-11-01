@@ -322,6 +322,35 @@ export function saveProfile(fd) {
   DB.set('company', updated);
 }
 
+export function fVideoHeroBlock(videoUrl) {
+  return '<div class="f f-full" style="background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:16px 18px;margin:8px 0">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px">'
+    + '<div>'
+    + '<label style="margin:0;font-size:13.5px;color:var(--navy);font-weight:700;display:flex;align-items:center;gap:7px">'
+    + ic('play') + ' Video Background Hero Beranda (MP4 / WebM)'
+    + '</label>'
+    + '<span class="mini" style="color:var(--mut);display:block;margin-top:2px">Format MP4 atau WebM, rasio 16:9, maksimal 100 MB.</span>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+    + '<input type="file" data-video-file-input accept="video/mp4,video/webm" style="display:none">'
+    + '<button type="button" class="btn btn-red btn-sm" data-btn-pick-video style="display:inline-flex;align-items:center;gap:6px">'
+    + ic('download') + ' Unggah Video dari Komputer'
+    + '</button>'
+    + '<button type="button" class="btn btn-line btn-sm" data-btn-reset-video title="Kembalikan ke video pabrik bawaan">'
+    + 'Reset ke factory.mp4'
+    + '</button>'
+    + '</div>'
+    + '</div>'
+    + '<div style="margin-top:6px">'
+    + '<label style="font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);margin-bottom:4px;display:block">URL / Path File Video Aktif</label>'
+    + '<input name="video" data-video-input value="' + esc(videoUrl || '') + '" placeholder="factory.mp4, /uploads/... atau https://…/video.mp4" style="background:#fff">'
+    + '<div data-video-msg class="mini" style="margin-top:6px;line-height:1.6;color:var(--mut)">'
+    + 'Klik tombol merah di atas untuk upload file video langsung dari komputer, atau letakkan file di folder website (mis. <b>factory.mp4</b>), atau tempel link video online (.mp4). Jika video tidak tersedia, otomatis menampilkan background animasi blueprint.'
+    + '</div>'
+    + '</div>'
+    + '</div>';
+}
+
 export function fHeroLight(curVal, videoUrl) {
   const val = Math.max(10, Math.min(100, Number(curVal !== undefined ? curVal : 50)));
   const shadeOpacity = Math.max(0.08, Math.min(0.98, 1.05 - (val / 100) * 0.90)).toFixed(2);
@@ -356,7 +385,7 @@ export function fHeroLight(curVal, videoUrl) {
     + '</div>'
     + '<div class="hero-live-preview" id="herolivepreview" style="position:relative;height:210px;border-radius:12px;overflow:hidden;background:#0a1626;border:1.5px solid var(--line);box-shadow:inset 0 0 40px rgba(0,0,0,.6)">'
     + '<div id="heroprevfallback" style="position:absolute;inset:0;opacity:' + fallbackOpacity + ';transition:opacity .2s;display:' + (vids.length ? 'none' : 'flex') + ';align-items:center;justify-content:center;overflow:hidden;pointer-events:none"><style>#heroprevfallback svg{width:100%;height:100%;object-fit:cover;display:block}</style>' + blueprint() + '</div>'
-    + (vids.length ? '<video id="heroprevmedia" muted loop playsinline autoplay style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:1;filter:brightness(' + videoBrightness + ');transition:filter .2s"><source src="' + esc(vids[0]) + '" type="video/mp4"></video>' : '')
+    + (vids.length ? '<video id="heroprevmedia" muted loop playsinline autoplay style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:1;filter:brightness(' + videoBrightness + ');transition:filter .2s"><source src="' + esc(vids[0]) + '" type="' + (vids[0].toLowerCase().endsWith('.webm') ? 'video/webm' : 'video/mp4') + '"></video>' : '')
     + '<div id="heroprevshade" style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,16,32,.74),rgba(8,16,32,.32) 45%,rgba(8,16,32,.9));opacity:' + shadeOpacity + ';transition:opacity .2s;pointer-events:none"></div>'
     + '<div style="position:relative;z-index:3;padding:16px 20px;height:100%;display:flex;flex-direction:column;justify-content:space-between;color:#fff;pointer-events:none">'
     + '<div><div style="font:600 9px \'Barlow\';letter-spacing:.25em;text-transform:uppercase;color:#eef2f8;text-shadow:0 1px 4px rgba(0,0,0,.8)">PT JIDOKA RESULT INDONESIA — INDUSTRIAL PACKAGING SOLUTIONS</div>'
@@ -396,8 +425,7 @@ export function aCompany() {
     + fText('hours', 'Jam Operasional', co.hours, 1)
     + fText('sales', 'Email Sales (RFQ & inquiry umum)', co.sales, 1)
     + fText('corp', 'Email Corporate Development (investor)', co.corp, 1)
-    + '<div class="f f-full"><label>URL Video Hero Beranda (mp4)</label><input name="video" value="' + esc(co.video || '') + '" placeholder="factory.mp4 atau https://…/video.mp4 — pisahkan beberapa URL dengan koma">'
-    + '<span class="mini" style="display:block;margin-top:6px;line-height:1.6">Letakkan file video bernama <b>factory.mp4</b> di folder yang sama dengan index.html, atau tempel URL video online (.mp4). Jika video gagal dimuat, otomatis tampil background animasi blueprint.</span></div>'
+    + fVideoHeroBlock(co.video)
     + fHeroLight(co.heroLight, co.video)
     + fTa('addr', 'Alamat Pabrik & Kantor', co.addr)
     + fText('mapLabel', 'Label Lokasi Peta', co.mapLabel || 'Jababeka II — Cikarang, Bekasi')
@@ -426,8 +454,7 @@ export function aHomeContent(sub) {
       + '<p class="tiny">Kelola video latar belakang dan intensitas cahaya/kecerahan background pada banner utama Beranda (PRD §7.1).</p>'
       + subnav
       + '<form id="heroform" class="form" style="margin-top:14px">'
-      + '<div class="f f-full"><label>URL Video Hero Beranda (mp4)</label><input name="video" value="' + esc(co.video || '') + '" placeholder="factory.mp4 atau https://…/video.mp4 — pisahkan beberapa URL dengan koma">'
-      + '<span class="mini" style="display:block;margin-top:6px;line-height:1.6">Letakkan file video bernama <b>factory.mp4</b> di folder website, atau tempel URL video online (.mp4). Jika video gagal dimuat, otomatis tampil background animasi blueprint.</span></div>'
+      + fVideoHeroBlock(co.video)
       + fHeroLight(co.heroLight, co.video)
       + '<div class="f-full"><button class="btn btn-red">Simpan Pengaturan Hero</button></div></form>';
   }
@@ -754,12 +781,15 @@ function initHeroLightControls(container) {
   const valEl = c.querySelector('#herolightval');
   const lblEl = c.querySelector('#herolightlbl');
   const prevShade = c.querySelector('#heroprevshade');
-  const prevMedia = c.querySelector('#heroprevmedia');
+  let prevMedia = c.querySelector('#heroprevmedia');
   const prevFallback = c.querySelector('#heroprevfallback');
   const prevBadge = c.querySelector('#heroprevbadge');
+  const previewBox = c.querySelector('#herolivepreview');
   const vidInput = c.querySelector('input[name="video"]');
-
-  if (!range) return;
+  const pickBtn = c.querySelector('[data-btn-pick-video]');
+  const fileIn = c.querySelector('[data-video-file-input]');
+  const resetBtn = c.querySelector('[data-btn-reset-video]');
+  const msgEl = c.querySelector('[data-video-msg]');
 
   const getLabel = v => {
     if (v < 35) return '(🌙 Redup / Gelap)';
@@ -769,13 +799,13 @@ function initHeroLightControls(container) {
   };
 
   const updateVisuals = () => {
+    if (!range) return;
     const v = Math.max(10, Math.min(100, Number(range.value || 50)));
     if (valEl) valEl.textContent = v + '%';
     if (lblEl) lblEl.textContent = getLabel(v);
     if (prevBadge) prevBadge.textContent = 'Cahaya: ' + v + '%';
 
     const shadeOpacity = Math.max(0.08, Math.min(0.98, 1.05 - (v / 100) * 0.90)).toFixed(2);
-    const videoOpacity = Math.max(0.20, Math.min(1.0, 0.25 + (v / 100) * 0.70)).toFixed(2);
     const videoBrightness = (0.75 + (v / 100) * 0.50).toFixed(2);
     const fallbackOpacity = Math.max(0.15, Math.min(0.85, 0.20 + (v / 100) * 0.60)).toFixed(2);
 
@@ -795,25 +825,163 @@ function initHeroLightControls(container) {
     }
   };
 
-  range.oninput = updateVisuals;
-
-  c.querySelectorAll('[data-hl-set]').forEach(btn => {
-    btn.onclick = () => {
-      range.value = btn.dataset.hlSet;
-      updateVisuals();
-    };
-  });
-
-  if (vidInput && prevMedia) {
-    vidInput.addEventListener('input', () => {
-      const src = (vidInput.value || 'factory.mp4').split(',')[0].trim();
-      const source = prevMedia.querySelector('source');
-      if (source && src && source.getAttribute('src') !== src) {
-        source.src = src;
-        prevMedia.load();
-        prevMedia.play().catch(() => {});
-      }
+  if (range) {
+    range.oninput = updateVisuals;
+    c.querySelectorAll('[data-hl-set]').forEach(btn => {
+      btn.onclick = () => {
+        range.value = btn.dataset.hlSet;
+        updateVisuals();
+      };
     });
+  }
+
+  const updateVideoPreview = (newSrc) => {
+    const src = (newSrc || '').split(',')[0].trim();
+    if (!src) {
+      if (prevMedia) prevMedia.style.display = 'none';
+      if (prevFallback) {
+        prevFallback.style.display = 'flex';
+        prevFallback.style.opacity = '0.6';
+      }
+      return;
+    }
+
+    const curLight = Number(range ? range.value : 50) || 50;
+    const videoBrightness = (0.75 + (curLight / 100) * 0.50).toFixed(2);
+
+    if (!prevMedia) {
+      if (previewBox) {
+        prevMedia = document.createElement('video');
+        prevMedia.id = 'heroprevmedia';
+        prevMedia.muted = true;
+        prevMedia.loop = true;
+        prevMedia.playsInline = true;
+        prevMedia.autoplay = true;
+        prevMedia.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:1;filter:brightness(' + videoBrightness + ');transition:filter .2s';
+        const s = document.createElement('source');
+        s.src = src;
+        s.type = src.toLowerCase().endsWith('.webm') ? 'video/webm' : 'video/mp4';
+        prevMedia.appendChild(s);
+        const shade = c.querySelector('#heroprevshade');
+        if (shade) previewBox.insertBefore(prevMedia, shade);
+        else previewBox.appendChild(prevMedia);
+      }
+    } else {
+      let source = prevMedia.querySelector('source');
+      if (!source) {
+        source = document.createElement('source');
+        prevMedia.appendChild(source);
+      }
+      source.src = src;
+      source.type = src.toLowerCase().endsWith('.webm') ? 'video/webm' : 'video/mp4';
+      prevMedia.style.display = 'block';
+      prevMedia.load();
+      prevMedia.play().catch(() => {});
+    }
+
+    if (prevMedia) {
+      prevMedia.onloadeddata = () => {
+        if (prevFallback) {
+          prevFallback.style.display = 'none';
+          prevFallback.style.opacity = '0';
+        }
+      };
+      prevMedia.onerror = () => {
+        if (prevFallback) {
+          prevFallback.style.display = 'flex';
+          prevFallback.style.opacity = '0.6';
+        }
+      };
+    }
+  };
+
+  if (vidInput) {
+    vidInput.addEventListener('input', () => updateVideoPreview(vidInput.value));
+  }
+
+  if (pickBtn && fileIn) {
+    pickBtn.onclick = () => fileIn.click();
+    fileIn.onchange = async () => {
+      const file = fileIn.files && fileIn.files[0];
+      if (!file) return;
+
+      const ext = (file.name.slice(file.name.lastIndexOf('.')) || '').toLowerCase();
+      if (!['.mp4', '.webm'].includes(ext)) {
+        alert('Format file tidak didukung. Mohon pilih file video dengan format .mp4 atau .webm');
+        fileIn.value = '';
+        return;
+      }
+
+      if (file.size > 100 * 1024 * 1024) {
+        alert('Ukuran file video melebihi batas 100 MB (' + (file.size / (1024 * 1024)).toFixed(1) + ' MB). Mohon kompres video terlebih dahulu.');
+        fileIn.value = '';
+        return;
+      }
+
+      pickBtn.disabled = true;
+      const origHtml = pickBtn.innerHTML;
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+      pickBtn.textContent = 'Mengunggah (' + sizeMB + ' MB)...';
+      if (msgEl) {
+        msgEl.style.color = 'var(--gold, #d97706)';
+        msgEl.textContent = '⏳ Mengunggah video "' + esc(file.name) + '" (' + sizeMB + ' MB) ke server... Mohon tunggu.';
+      }
+
+      const fd = new FormData();
+      fd.append('file', file);
+
+      try {
+        const res = await authFetch('/api/upload', {
+          method: 'POST',
+          body: fd
+        });
+        const data = await res.json();
+        const uploadedUrl = (data.file && data.file.url) || data.url;
+        const uploadedName = (data.file && data.file.orig_name) || data.orig_name || file.name;
+        if (res.ok && data.success && uploadedUrl) {
+          if (vidInput) {
+            vidInput.value = uploadedUrl;
+            updateVideoPreview(uploadedUrl);
+          }
+          if (msgEl) {
+            msgEl.style.color = '#10b981';
+            msgEl.textContent = '✓ Video berhasil diunggah: ' + esc(uploadedName) + ' (' + sizeMB + ' MB). Klik tombol "Simpan" di bawah untuk menyimpan perubahan.';
+          }
+          toast('Video berhasil diunggah ke server');
+        } else {
+          if (msgEl) {
+            msgEl.style.color = 'var(--red, #dc2626)';
+            msgEl.textContent = '❌ Gagal upload: ' + esc(data.message || 'Terjadi kesalahan pada server');
+          }
+          toast('Gagal mengunggah video: ' + (data.message || ''));
+        }
+      } catch (err) {
+        console.error('Upload video error:', err);
+        if (msgEl) {
+          msgEl.style.color = 'var(--red, #dc2626)';
+          msgEl.textContent = '❌ Gagal koneksi saat upload: ' + esc(err.message);
+        }
+        toast('Gagal mengunggah video (kesalahan jaringan)');
+      } finally {
+        pickBtn.disabled = false;
+        pickBtn.innerHTML = origHtml;
+        fileIn.value = '';
+      }
+    };
+  }
+
+  if (resetBtn) {
+    resetBtn.onclick = () => {
+      if (vidInput) {
+        vidInput.value = 'factory.mp4';
+        updateVideoPreview('factory.mp4');
+      }
+      if (msgEl) {
+        msgEl.style.color = 'var(--mut)';
+        msgEl.textContent = 'Video di-reset ke bawaan (factory.mp4). Klik tombol Simpan di bawah untuk menerapkan.';
+      }
+      toast('URL video di-reset ke factory.mp4');
+    };
   }
 }
 

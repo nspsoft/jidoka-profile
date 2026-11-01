@@ -113,7 +113,23 @@ Halaman Karier/Job portal (PRD asli §15 item terakhir).
 Terjemahan JP penuh (buat lang: 'jp' di i18n bila disetujui).
 Analytics (GA4/Plausible) + tracking konversi RFQ (PRD §11.6).
 Multi-user CMS dengan peran (editor vs admin).
-7. Non-Fungsional (dari PRD asli §11 — tetap berlaku)
+7. Non-Fungsional & Spesifikasi Keamanan (Enterprise Security Baseline)
+7.1 Performa & Aksesibilitas:
+Responsif penuh (desktop/tablet/mobile), cepat walau banyak foto/video.
+SEO & AEO: arsitektur konten logis: siapa → produk → capability → industry → location → quality → contact.
+Anti-spam semua form (honeypot + rate limit); notifikasi sesuai jenis form.
+Multi-bahasa EN/ID; JP-tone untuk bagian tertentu.
+Kepatuhan aksesibilitas WCAG AA (kontras rasio ≥ 4.5:1, focus-visible, prefers-reduced-motion, valid heading-order). Skor target: 100/100 di PageSpeed Insights.
+
+7.2 Keamanan & Hardening (Zero-Trust Backend):
+- Rate Limiting Anti-Brute Force: Pembatasan ketat percobaan login pada /api/auth/login (maks 10x per 15 menit per IP) dan pengiriman form leads pada /api/leads (maks 15x per 15 menit per IP).
+- Proteksi Upload & Sandbox: Endpoint /api/upload wajib menerapkan whitelist ekstensi ketat (.png, .jpg, .jpeg, .webp, .svg, .gif, .ico, .mp4, .webm, .pdf, .docx, .xlsx) dan blokir file script/executable. File .svg wajib diinspeksi anti-XSS. Header static file /uploads diatur CSP sandbox (default-src 'none') dan nosniff.
+- Sanitasi Input & Email Injection: Seluruh input publik wajib di-sanitize via escHtml() sebelum dibuatkan email notifikasi, serta pembatasan batas payload (maks 30 field, maks 3000 karakter per teks).
+- Database & Collection Whitelist: Endpoint /api/content/:collection hanya menerima 14 koleksi valid untuk mencegah table bloat/pollution.
+- HTTP Security Headers & CORS: Menggunakan header X-Content-Type-Options: nosniff, X-Frame-Options: SAMEORIGIN, Referrer-Policy: strict-origin-when-cross-origin, mematikan header X-Powered-By, dan CORS dibatasi ke domain resmi jidoka.co.id & localhost.
+- Web Server Hardening (Nginx): Memblokir akses publik ke file kredensial .env, .git, package.json, dan direktori server/ via response HTTP 404, serta menonaktifkan server_tokens.
+
+7.3 Spesifikasi Baseline PRD asli §11:
 Responsif penuh (desktop/tablet/mobile), cepat walau banyak foto/video.
 SEO & AEO: arsitektur konten logis: siapa → produk → capability → industry →location → quality → contact.
 Anti-spam semua form; notifikasi sesuai jenis form.

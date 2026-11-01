@@ -22,7 +22,7 @@ export function renderHome() {
     + '</style>'
     + '<div class="hv-media" id="hvm">'
     + '<div class="hv-fallback">' + blueprint() + '</div>'
-    + (vids.length ? '<video id="hv" muted loop playsinline preload="metadata"' + (RM ? '' : ' autoplay') + '>' + vids.map(u => '<source src="' + esc(u) + '" type="video/mp4">').join('') + '</video>' : '')
+    + (vids.length ? '<video id="hv" muted loop playsinline preload="metadata"' + (RM ? '' : ' autoplay') + '>' + vids.map(u => '<source src="' + esc(u) + '" type="' + (u.toLowerCase().endsWith('.webm') ? 'video/webm' : 'video/mp4') + '">').join('') + '</video>' : '')
     + '<div class="hv-shade"></div></div>'
     + '<div class="hv-in"><div>'
     + '<div class="hv-kick">' + L({ en: 'PT Jidoka Result Indonesia — Industrial Packaging Solutions', id: 'PT Jidoka Result Indonesia — Solusi Kemasan Industri' }) + '</div>'
