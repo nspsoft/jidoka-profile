@@ -122,6 +122,7 @@ Multi-bahasa EN/ID; JP-tone untuk bagian tertentu.
 Kepatuhan aksesibilitas WCAG AA (kontras rasio ≥ 4.5:1, focus-visible, prefers-reduced-motion, valid heading-order). Skor target: 100/100 di PageSpeed Insights.
 
 7.2 Keamanan & Hardening (Zero-Trust Backend):
+- Multi-User IAM & Manajemen Akun: Dukungan multi-akun admin dengan peran granular (`admin`, `editor`), isolasi kredensial & MFA per user di tabel `admin_users`, perlindungan anti-self-deletion & anti-orphan admin, serta emergency MFA reset oleh SuperAdmin jika HP staf hilang/rusak.
 - Multi-Factor Authentication (MFA Google Authenticator): Otentikasi dua langkah berbasis RFC 6238 TOTP (HMAC-SHA1, 30s period, ±30s drift window) pada login Admin CMS. Dilengkapi rate limiter verifikasi (maks 5x per 10 menit), 8 emergency backup codes sekali pakai (SHA-256 hashed), dan proteksi verifikasi ganda saat penonaktifan.
 - Rate Limiting Anti-Brute Force: Pembatasan ketat percobaan login pada /api/auth/login (maks 10x per 15 menit per IP) dan pengiriman form leads pada /api/leads (maks 15x per 15 menit per IP).
 - Proteksi Upload & Sandbox: Endpoint /api/upload wajib menerapkan whitelist ekstensi ketat (.png, .jpg, .jpeg, .webp, .svg, .gif, .ico, .mp4, .webm, .pdf, .docx, .xlsx) dan blokir file script/executable. File .svg wajib diinspeksi anti-XSS. Header static file /uploads diatur CSP sandbox (default-src 'none') dan nosniff.

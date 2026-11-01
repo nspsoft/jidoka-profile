@@ -17,13 +17,18 @@ Sistem mengadopsi pendekatan *Zero-Trust* dan pertahanan berlapis (*Defense-in-D
 
 ## 2. 🧱 Implementasi Hardening (Mitigasi Celah Keamanan)
 
-### A. Autentikasi & Proteksi Akses (IAM)
+### A. Autentikasi, Multi-User IAM & Proteksi Akses
 - **Multi-Factor Authentication (MFA / 2FA) Google Authenticator**:
   - Arsitektur berbasis standar industri **RFC 6238 (TOTP - Time-Based One-Time Password)** dengan algoritma HMAC-SHA1 dan interval 30 detik (toleransi drift waktu ±30s).
   - Alur login 2-langkah (*Two-Step Challenge*): Password benar -> Server menerbitkan tiket jangka pendek (`mfa_ticket`, kadaluarsa 5 menit) -> Wajib memasukkan 6-digit kode OTP dari aplikasi Google Authenticator sebelum JWT berhak akses penuh diterbitkan.
   - **Rate Limiting Khusus MFA**: Endpoint `/api/auth/mfa/verify-login` dibatasi maksimal **5 percobaan per 10 menit per IP** untuk mencegah serangan brute-force terhadap 6-digit PIN.
   - **Single-Use Emergency Backup Recovery Codes**: Menyediakan 8 kode cadangan sekali pakai (format `XXXX-XXXX`) yang disimpan dalam bentuk hash SHA-256. Setiap penggunaan kode cadangan otomatis menghanguskan kode tersebut dari database agar tidak dapat dipakai ulang.
   - **Proteksi Penonaktifan MFA**: Menonaktifkan MFA wajib menyertakan verifikasi ganda (kata sandi admin + kode 6-digit aktif) untuk mencegah penonaktifan sepihak saat sesi browser tidak sengaja ditinggal terbuka.
+- **Multi-User IAM & Granular RBAC**:
+  - **Isolasi Penuh Antar-Akun**: Setiap pengguna admin memiliki baris terpisah di database (`admin_users`), dengan secret TOTP, status MFA, password hash (`bcrypt`), dan token sesi mandiri. Aktivasi atau penonaktifan MFA pada staf A tidak berpengaruh ke staf B.
+  - **Peran Akses (*Roles*)**: Mendukung peran `admin` (hak akses penuh ke konten, pengaturan sistem, dan kelola pengguna) serta `editor` (kelola konten website).
+  - **Safeguard Anti-Self-Deletion & Anti-Orphan**: Sistem memblokir upaya admin menghapus akunnya sendiri, serta mencegah penghapusan jika hanya tersisa satu akun admin di sistem.
+  - **Emergency Staff MFA Reset**: Apabila staf atau editor kehilangan ponselnya, SuperAdmin dapat me-reset status MFA akun terkait melalui modul *Kelola Pengguna* di Admin CMS tanpa perlu mengakses database secara manual. Staf kemudian dapat login kembali menggunakan kata sandinya dan menghubungkan ponsel barunya.
 - **Anti Brute-Force Rate Limiting**:
   - Endpoint `/api/auth/login` dilindungi dengan pembatas percobaan: **maksimal 10 percobaan gagal per 15 menit per IP address**.
   - Jika ambang batas terlampaui, request otomatis ditolak dengan pesan peringatan dan status HTTP 429 (*Too Many Requests*).

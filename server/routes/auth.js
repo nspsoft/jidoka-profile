@@ -86,7 +86,7 @@ router.post('/login', loginLimiter, async (req, res) => {
 
     // Normal direct login if MFA is not enabled yet
     const token = jwt.sign(
-      { id: user.id, email: user.email },
+      { id: user.id, email: user.email, name: user.name || 'Admin', role: user.role || 'admin' },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -94,7 +94,13 @@ router.post('/login', loginLimiter, async (req, res) => {
     res.json({
       success: true,
       token,
-      user: { id: user.id, email: user.email, mfa_enabled: false }
+      user: {
+        id: user.id,
+        name: user.name || 'Admin',
+        email: user.email,
+        role: user.role || 'admin',
+        mfa_enabled: false
+      }
     });
   } catch (err) {
     console.error('Login error:', err);
@@ -144,11 +150,21 @@ router.post('/mfa/verify-login', mfaLimiter, async (req, res) => {
       // Update daftar kode cadangan yang tersisa
       await pool.query('UPDATE admin_users SET backup_codes = ? WHERE id = ?', [JSON.stringify(check.remaining), user.id]);
 
-      const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+      const token = jwt.sign(
+        { id: user.id, email: user.email, name: user.name || 'Admin', role: user.role || 'admin' },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      );
       return res.json({
         success: true,
         token,
-        user: { id: user.id, email: user.email, mfa_enabled: true },
+        user: {
+          id: user.id,
+          name: user.name || 'Admin',
+          email: user.email,
+          role: user.role || 'admin',
+          mfa_enabled: true
+        },
         message: `Berhasil login dengan kode cadangan darurat. Sisa kode cadangan: ${check.remaining.length}`
       });
     }
@@ -159,11 +175,21 @@ router.post('/mfa/verify-login', mfaLimiter, async (req, res) => {
       return res.status(401).json({ success: false, message: 'Kode 6 digit Google Authenticator salah atau kedaluwarsa' });
     }
 
-    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign(
+      { id: user.id, email: user.email, name: user.name || 'Admin', role: user.role || 'admin' },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
     res.json({
       success: true,
       token,
-      user: { id: user.id, email: user.email, mfa_enabled: true }
+      user: {
+        id: user.id,
+        name: user.name || 'Admin',
+        email: user.email,
+        role: user.role || 'admin',
+        mfa_enabled: true
+      }
     });
   } catch (err) {
     console.error('MFA verify login error:', err);
@@ -372,6 +398,193 @@ router.patch('/password', requireAuth, async (req, res) => {
     res.json({ success: true, message: 'Password berhasil diperbarui' });
   } catch (err) {
     console.error('Update password error:', err);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// ==========================================
+// USER MANAGEMENT & MULTI-USER IAM
+// ==========================================
+
+// GET /api/auth/users
+router.get('/users', requireAuth, async (req, res) => {
+  try {
+    const pool = getPool();
+    const [rows] = await pool.query(
+      'SELECT id, name, email, role, mfa_enabled, created_at FROM admin_users ORDER BY id ASC'
+    );
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    console.error('Fetch users error:', err);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// POST /api/auth/users
+router.post('/users', requireAuth, async (req, res) => {
+  try {
+    if (req.user.role && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Hanya Administrator yang memiliki wewenang menambah pengguna' });
+    }
+
+    const { name, email, password, role } = req.body || {};
+    if (!name || !email || !password) {
+      return res.status(400).json({ success: false, message: 'Nama, email, dan kata sandi wajib diisi' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      return res.status(400).json({ success: false, message: 'Format email tidak valid' });
+    }
+
+    if (password.length < 8 || !/(?=.*[a-zA-Z])(?=.*[0-9])/.test(password)) {
+      return res.status(400).json({ success: false, message: 'Kata sandi minimal 8 karakter dan mengandung kombinasi huruf serta angka' });
+    }
+
+    const pool = getPool();
+    const [existing] = await pool.query('SELECT id FROM admin_users WHERE email = ? LIMIT 1', [cleanEmail]);
+    if (existing && existing.length > 0) {
+      return res.status(400).json({ success: false, message: 'Email sudah terdaftar untuk pengguna lain' });
+    }
+
+    const hash = await bcrypt.hash(password, 10);
+    const userRole = role === 'editor' ? 'editor' : 'admin';
+
+    const [result] = await pool.query(
+      'INSERT INTO admin_users (name, email, password_hash, role, mfa_enabled) VALUES (?, ?, ?, ?, 0)',
+      [name.trim(), cleanEmail, hash, userRole]
+    );
+
+    res.json({
+      success: true,
+      message: 'Pengguna baru berhasil ditambahkan',
+      user: {
+        id: result.insertId,
+        name: name.trim(),
+        email: cleanEmail,
+        role: userRole,
+        mfa_enabled: false
+      }
+    });
+  } catch (err) {
+    console.error('Create user error:', err);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// PATCH /api/auth/users/:id
+router.patch('/users/:id', requireAuth, async (req, res) => {
+  try {
+    const targetId = Number(req.params.id);
+    if (!targetId) return res.status(400).json({ success: false, message: 'ID pengguna tidak valid' });
+
+    if (req.user.role !== 'admin' && req.user.id !== targetId) {
+      return res.status(403).json({ success: false, message: 'Akses ditolak' });
+    }
+
+    const { name, role, password } = req.body || {};
+    const pool = getPool();
+    const [rows] = await pool.query('SELECT * FROM admin_users WHERE id = ? LIMIT 1', [targetId]);
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Pengguna tidak ditemukan' });
+    }
+
+    const updates = [];
+    const params = [];
+
+    if (name && name.trim()) {
+      updates.push('name = ?');
+      params.push(name.trim());
+    }
+
+    if (role && (role === 'admin' || role === 'editor') && req.user.role === 'admin') {
+      updates.push('role = ?');
+      params.push(role);
+    }
+
+    if (password) {
+      if (password.length < 8 || !/(?=.*[a-zA-Z])(?=.*[0-9])/.test(password)) {
+        return res.status(400).json({ success: false, message: 'Password minimal 8 karakter dengan kombinasi huruf dan angka' });
+      }
+      const hash = await bcrypt.hash(password, 10);
+      updates.push('password_hash = ?');
+      params.push(hash);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, message: 'Tidak ada data yang diperbarui' });
+    }
+
+    params.push(targetId);
+    await pool.query(`UPDATE admin_users SET ${updates.join(', ')} WHERE id = ?`, params);
+
+    res.json({ success: true, message: 'Data pengguna berhasil diperbarui' });
+  } catch (err) {
+    console.error('Update user error:', err);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// DELETE /api/auth/users/:id
+router.delete('/users/:id', requireAuth, async (req, res) => {
+  try {
+    const targetId = Number(req.params.id);
+    if (!targetId) return res.status(400).json({ success: false, message: 'ID pengguna tidak valid' });
+
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Hanya Administrator yang berwenang menghapus pengguna' });
+    }
+
+    if (req.user.id === targetId) {
+      return res.status(400).json({ success: false, message: 'Anda tidak dapat menghapus akun Anda sendiri yang sedang aktif' });
+    }
+
+    const pool = getPool();
+    const [admins] = await pool.query("SELECT id FROM admin_users WHERE role = 'admin'");
+    const [targetUser] = await pool.query('SELECT role FROM admin_users WHERE id = ?', [targetId]);
+    if (!targetUser || targetUser.length === 0) {
+      return res.status(404).json({ success: false, message: 'Pengguna tidak ditemukan' });
+    }
+
+    if (targetUser[0].role === 'admin' && admins.length <= 1) {
+      return res.status(400).json({ success: false, message: 'Tidak dapat menghapus Administrator terakhir di sistem' });
+    }
+
+    await pool.query('DELETE FROM admin_users WHERE id = ?', [targetId]);
+    res.json({ success: true, message: 'Pengguna berhasil dihapus' });
+  } catch (err) {
+    console.error('Delete user error:', err);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// POST /api/auth/users/:id/reset-mfa
+router.post('/users/:id/reset-mfa', requireAuth, async (req, res) => {
+  try {
+    const targetId = Number(req.params.id);
+    if (!targetId) return res.status(400).json({ success: false, message: 'ID pengguna tidak valid' });
+
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Hanya Administrator yang berwenang me-reset MFA staf' });
+    }
+
+    const pool = getPool();
+    const [rows] = await pool.query('SELECT email FROM admin_users WHERE id = ? LIMIT 1', [targetId]);
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Pengguna tidak ditemukan' });
+    }
+
+    await pool.query(
+      'UPDATE admin_users SET mfa_enabled = 0, totp_secret = NULL, totp_temp_secret = NULL, backup_codes = NULL WHERE id = ?',
+      [targetId]
+    );
+
+    res.json({
+      success: true,
+      message: `MFA untuk akun ${rows[0].email} telah berhasil di-reset. Pengguna sekarang dapat login dengan kata sandi dan mendaftarkan ponsel barunya.`
+    });
+  } catch (err) {
+    console.error('Reset MFA error:', err);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });

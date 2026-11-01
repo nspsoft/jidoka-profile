@@ -157,3 +157,62 @@ export async function regenerateBackupCodes(password) {
     return { success: false, message: 'Gagal membuat kode cadangan' };
   }
 }
+
+// User Management Methods
+export async function getUsers() {
+  try {
+    const res = await authFetch('/api/auth/users');
+    return await res.json();
+  } catch (e) {
+    return { success: false, message: 'Gagal mengambil data pengguna' };
+  }
+}
+
+export async function createUser(data) {
+  try {
+    const res = await authFetch('/api/auth/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return await res.json();
+  } catch (e) {
+    return { success: false, message: 'Gagal menambah pengguna' };
+  }
+}
+
+export async function updateUser(id, data) {
+  try {
+    const res = await authFetch(`/api/auth/users/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return await res.json();
+  } catch (e) {
+    return { success: false, message: 'Gagal memperbarui pengguna' };
+  }
+}
+
+export async function deleteUser(id) {
+  try {
+    const res = await authFetch(`/api/auth/users/${id}`, {
+      method: 'DELETE'
+    });
+    return await res.json();
+  } catch (e) {
+    return { success: false, message: 'Gagal menghapus pengguna' };
+  }
+}
+
+export async function resetUserMfa(id) {
+  try {
+    const res = await authFetch(`/api/auth/users/${id}/reset-mfa`, {
+      method: 'POST'
+    });
+    return await res.json();
+  } catch (e) {
+    return { success: false, message: 'Gagal me-reset MFA pengguna' };
+  }
+}
+

@@ -1,5 +1,5 @@
 import { DB, dbRead, dbWrite, DEF, dP, dN, dC, dR, dCo, dPillars, dWhy, dIndustries, dTour, dMach, dFlow, dCerts, dWay, dHist, dGov } from '../data/db.js';
-import { isLogged, doLogin, doMfaLogin, doLogout, authFetch, getMfaStatus, setupMfa, verifyMfaSetup, disableMfa, regenerateBackupCodes } from '../data/auth.js';
+import { isLogged, doLogin, doMfaLogin, doLogout, authFetch, getUser, getMfaStatus, setupMfa, verifyMfaSetup, disableMfa, regenerateBackupCodes, getUsers, createUser, updateUser, deleteUser, resetUserMfa } from '../data/auth.js';
 import { esc, qs, qa, lines, parsePairs, slug } from '../components/dom.js';
 import { logo, ic } from '../components/icons.js';
 import { toast } from '../components/toast.js';
@@ -448,6 +448,15 @@ export function aCompany() {
     + '<div id="mfa-modal-container"></div>';
 }
 
+export function aUsers() {
+  return '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">'
+    + '<div><h3 style="margin:0">Kelola Pengguna Admin CMS</h3>'
+    + '<p class="tiny" style="margin-top:4px">Kelola akun staf administrator, hak akses peran, dan status keamanan MFA Google Authenticator masing-masing staf.</p></div>'
+    + '<button class="btn btn-red btn-sm" id="btn-add-user">' + ic('plus') + ' Tambah Pengguna</button></div>'
+    + '<div id="users-table-box" style="margin-top:18px"><p class="tiny" style="color:var(--mut)">Memuat daftar pengguna...</p></div>'
+    + '<div id="user-modal-container"></div>';
+}
+
 /* ============================================================
    KONTEN BERANDA: Banner Hero, 4 Pilar, 4 Alasan, Sektor Industri
    ============================================================ */
@@ -773,6 +782,7 @@ export function renderAdmin(tab, sub) {
     ['news', 'Berita & Aktivitas'],
     ['caps', 'Kapabilitas & Solusi'],
     ['resources', 'Dokumen'],
+    ['users', 'Kelola Pengguna'],
     ['company', 'Kontak & Akses'],
     ['backup', 'Backup & Pulihkan']
   ];
@@ -787,6 +797,7 @@ export function renderAdmin(tab, sub) {
       : tab === 'news' ? aNews()
       : tab === 'caps' ? aCaps()
       : tab === 'resources' ? aRes()
+      : tab === 'users' ? aUsers()
       : tab === 'company' ? aCompany()
       : tab === 'backup' ? aBackup()
       : aDash();
@@ -2082,6 +2093,248 @@ export function mountAdmin(seg, router, goHash) {
         if (inp) inp.oninput = updatePreview;
       });
     }
+  }
+
+  if (T === 'users') {
+    const tableBox = qs('#users-table-box');
+    const modalBox = qs('#user-modal-container');
+    const addBtn = qs('#btn-add-user');
+    const curUser = getUser() || {};
+
+    const loadUsers = async () => {
+      if (!tableBox) return;
+      tableBox.innerHTML = '<p class="tiny" style="color:var(--mut)">Memuat daftar pengguna...</p>';
+      const res = await getUsers();
+      if (!res.success || !Array.isArray(res.data)) {
+        tableBox.innerHTML = '<p class="tiny" style="color:var(--red)">' + esc(res.message || 'Gagal memuat pengguna') + '</p>';
+        return;
+      }
+
+      const users = res.data;
+      if (users.length === 0) {
+        tableBox.innerHTML = '<p class="empty">Belum ada pengguna terdaftar.</p>';
+        return;
+      }
+
+      tableBox.innerHTML = '<div class="tbl"><table>'
+        + '<thead><tr>'
+        + '<th>Nama & Email</th>'
+        + '<th>Peran</th>'
+        + '<th>Google Authenticator</th>'
+        + '<th>Tanggal Dibuat</th>'
+        + '<th style="text-align:right">Aksi</th>'
+        + '</tr></thead>'
+        + '<tbody>'
+        + users.map(u => {
+          const isSelf = curUser.id === u.id || curUser.email === u.email;
+          const roleBadge = u.role === 'admin'
+            ? '<span class="mfa-badge on" style="font-size:10px">Administrator</span>'
+            : '<span class="mfa-badge off" style="font-size:10px">Editor</span>';
+          const mfaBadge = u.mfa_enabled
+            ? '<span class="mfa-badge on" style="font-size:10px">' + ic('checkc') + ' Aktif 🛡️</span>'
+            : '<span class="mfa-badge off" style="font-size:10px">⚠️ Belum Aktif</span>';
+          const dateStr = u.created_at ? new Date(u.created_at).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric' }) : '-';
+
+          return '<tr data-uid="' + u.id + '">'
+            + '<td><b>' + esc(u.name || 'Admin') + '</b>' + (isSelf ? ' <small style="color:var(--red)">(Anda)</small>' : '')
+            + '<br><span class="mini" style="color:var(--mut)">' + esc(u.email) + '</span></td>'
+            + '<td>' + roleBadge + '</td>'
+            + '<td>' + mfaBadge + '</td>'
+            + '<td class="mini">' + esc(dateStr) + '</td>'
+            + '<td style="text-align:right"><div style="display:inline-flex;gap:6px;justify-content:flex-end">'
+            + '<button type="button" class="btn btn-line btn-sm" data-edit-u="' + u.id + '" title="Edit Pengguna">' + ic('edit') + '</button>'
+            + (u.mfa_enabled ? '<button type="button" class="btn btn-line btn-sm" data-reset-mfa-u="' + u.id + '" title="Reset MFA (jika HP hilang)" style="color:#d97706;border-color:#fde68a">' + ic('shield') + ' Reset MFA</button>' : '')
+            + (!isSelf ? '<button type="button" class="btn btn-sm" data-del-u="' + u.id + '" title="Hapus Pengguna" style="color:var(--red);border:1.5px solid var(--red);border-radius:8px;padding:6px 10px;background:#fff">' + ic('trash') + '</button>' : '')
+            + '</div></td></tr>';
+        }).join('')
+        + '</tbody></table></div>';
+
+      // Bind edit buttons
+      qa('[data-edit-u]').forEach(btn => {
+        btn.onclick = () => {
+          const u = users.find(x => x.id === Number(btn.dataset.editU));
+          if (u) openEditModal(u);
+        };
+      });
+
+      // Bind reset MFA buttons
+      qa('[data-reset-mfa-u]').forEach(btn => {
+        btn.onclick = () => {
+          const u = users.find(x => x.id === Number(btn.dataset.resetMfaU));
+          if (u) openResetMfaModal(u);
+        };
+      });
+
+      // Bind delete buttons
+      qa('[data-del-u]').forEach(btn => {
+        btn.onclick = () => {
+          const u = users.find(x => x.id === Number(btn.dataset.delU));
+          if (u) openDeleteModal(u);
+        };
+      });
+    };
+
+    const closeModal = () => {
+      if (modalBox) modalBox.innerHTML = '';
+    };
+
+    const openAddModal = () => {
+      modalBox.innerHTML = '<div class="mfa-modal-overlay"><div class="mfa-modal">'
+        + '<div style="display:flex;justify-content:space-between;align-items:center">'
+        + '<h4>Tambah Pengguna Admin Baru</h4>'
+        + '<button type="button" class="btn-close" id="u-close" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--mut)">' + ic('x') + '</button>'
+        + '</div>'
+        + '<p class="tiny" style="margin:6px 0 14px">Buat akun untuk staf atau pengelola website. Pengguna dapat langsung login dan mengaktifkan Google Authenticator sendiri di ponselnya.</p>'
+        + '<form id="u-add-form" class="form" style="grid-template-columns:1fr">'
+        + '<div class="f"><label>Nama Lengkap</label><input type="text" id="u-name" required placeholder="Contoh: Budi Santoso"></div>'
+        + '<div class="f"><label>Email</label><input type="email" id="u-email" required placeholder="nama@jidoka.co.id"></div>'
+        + '<div class="f"><label>Peran (Hak Akses)</label><select id="u-role"><option value="admin">Administrator (Hak Akses Penuh)</option><option value="editor">Editor (Hanya Kelola Konten)</option></select></div>'
+        + '<div class="f"><label>Kata Sandi Awal (Minimal 8 karakter huruf & angka)</label><input type="password" id="u-pw" required placeholder="Minimal 8 karakter"></div>'
+        + '<div class="err" id="u-err"></div>'
+        + '<div style="display:flex;gap:10px;margin-top:14px">'
+        + '<button class="btn btn-red" style="flex:1" id="u-sub-btn">Simpan Pengguna</button>'
+        + '<button type="button" class="btn btn-line" id="u-cancel">Batal</button>'
+        + '</div></form>'
+        + '</div></div>';
+
+      qs('#u-close').onclick = closeModal;
+      qs('#u-cancel').onclick = closeModal;
+
+      qs('#u-add-form').onsubmit = async e => {
+        e.preventDefault();
+        const name = qs('#u-name').value;
+        const email = qs('#u-email').value;
+        const role = qs('#u-role').value;
+        const password = qs('#u-pw').value;
+        const btn = qs('#u-sub-btn');
+        btn.disabled = true;
+        btn.textContent = 'Menyimpan...';
+
+        const res = await createUser({ name, email, role, password });
+        if (res.success) {
+          toast('Pengguna baru berhasil ditambahkan');
+          closeModal();
+          loadUsers();
+        } else {
+          btn.disabled = false;
+          btn.textContent = 'Simpan Pengguna';
+          const errEl = qs('#u-err');
+          if (errEl) {
+            errEl.textContent = res.message || 'Gagal menambah pengguna';
+            errEl.style.display = 'block';
+          }
+        }
+      };
+    };
+
+    const openEditModal = (u) => {
+      modalBox.innerHTML = '<div class="mfa-modal-overlay"><div class="mfa-modal">'
+        + '<div style="display:flex;justify-content:space-between;align-items:center">'
+        + '<h4>Edit Pengguna</h4>'
+        + '<button type="button" class="btn-close" id="u-edit-close" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--mut)">' + ic('x') + '</button>'
+        + '</div>'
+        + '<p class="tiny" style="margin:6px 0 14px">Ubah nama, peran, atau reset kata sandi untuk akun <b>' + esc(u.email) + '</b>.</p>'
+        + '<form id="u-edit-form" class="form" style="grid-template-columns:1fr">'
+        + '<div class="f"><label>Nama Lengkap</label><input type="text" id="u-edit-name" value="' + esc(u.name || '') + '" required></div>'
+        + '<div class="f"><label>Email (Tidak dapat diubah)</label><input type="email" value="' + esc(u.email) + '" disabled style="background:#f1f5f9;cursor:not-allowed"></div>'
+        + '<div class="f"><label>Peran (Hak Akses)</label><select id="u-edit-role"><option value="admin"' + (u.role === 'admin' ? ' selected' : '') + '>Administrator (Hak Akses Penuh)</option><option value="editor"' + (u.role === 'editor' ? ' selected' : '') + '>Editor (Hanya Kelola Konten)</option></select></div>'
+        + '<div class="f"><label>Ganti Kata Sandi (Kosongkan jika tidak ingin diubah)</label><input type="password" id="u-edit-pw" placeholder="Minimal 8 karakter jika diisi"></div>'
+        + '<div class="err" id="u-edit-err"></div>'
+        + '<div style="display:flex;gap:10px;margin-top:14px">'
+        + '<button class="btn btn-red" style="flex:1" id="u-edit-sub">Simpan Perubahan</button>'
+        + '<button type="button" class="btn btn-line" id="u-edit-cancel">Batal</button>'
+        + '</div></form>'
+        + '</div></div>';
+
+      qs('#u-edit-close').onclick = closeModal;
+      qs('#u-edit-cancel').onclick = closeModal;
+
+      qs('#u-edit-form').onsubmit = async e => {
+        e.preventDefault();
+        const name = qs('#u-edit-name').value;
+        const role = qs('#u-edit-role').value;
+        const password = qs('#u-edit-pw').value;
+        const btn = qs('#u-edit-sub');
+        btn.disabled = true;
+        btn.textContent = 'Menyimpan...';
+
+        const payload = { name, role };
+        if (password && password.trim()) payload.password = password.trim();
+
+        const res = await updateUser(u.id, payload);
+        if (res.success) {
+          toast('Data pengguna berhasil diperbarui');
+          closeModal();
+          loadUsers();
+        } else {
+          btn.disabled = false;
+          btn.textContent = 'Simpan Perubahan';
+          const errEl = qs('#u-edit-err');
+          if (errEl) {
+            errEl.textContent = res.message || 'Gagal update pengguna';
+            errEl.style.display = 'block';
+          }
+        }
+      };
+    };
+
+    const openResetMfaModal = (u) => {
+      modalBox.innerHTML = '<div class="mfa-modal-overlay"><div class="mfa-modal">'
+        + '<div style="display:flex;align-items:center;gap:8px">' + ic('shield') + '<h4 style="margin:0;color:#d97706">Konfirmasi Reset MFA</h4></div>'
+        + '<p class="tiny" style="margin:12px 0 16px">Apakah Anda yakin ingin me-reset Google Authenticator untuk akun <b>' + esc(u.email) + '</b>?<br><br>'
+        + 'Fitur ini digunakan saat ponsel staf hilang atau rusak. Status MFA akan dikembalikan ke <b>Nonaktif</b> sehingga staf dapat login menggunakan kata sandinya dan mendaftarkan ponsel barunya.</p>'
+        + '<div style="display:flex;gap:10px">'
+        + '<button class="btn btn-red" style="flex:1" id="u-conf-reset-mfa">Ya, Reset MFA Staf</button>'
+        + '<button type="button" class="btn btn-line" id="u-cancel-reset-mfa">Batal</button>'
+        + '</div></div></div>';
+
+      qs('#u-cancel-reset-mfa').onclick = closeModal;
+      qs('#u-conf-reset-mfa').onclick = async () => {
+        const btn = qs('#u-conf-reset-mfa');
+        btn.disabled = true;
+        btn.textContent = 'Mereset...';
+        const res = await resetUserMfa(u.id);
+        if (res.success) {
+          toast('MFA akun staf berhasil di-reset');
+          closeModal();
+          loadUsers();
+        } else {
+          btn.disabled = false;
+          btn.textContent = 'Ya, Reset MFA Staf';
+          toast(res.message || 'Gagal reset MFA');
+        }
+      };
+    };
+
+    const openDeleteModal = (u) => {
+      modalBox.innerHTML = '<div class="mfa-modal-overlay"><div class="mfa-modal">'
+        + '<div style="display:flex;align-items:center;gap:8px">' + ic('trash') + '<h4 style="margin:0;color:var(--red)">Hapus Pengguna</h4></div>'
+        + '<p class="tiny" style="margin:12px 0 16px">Apakah Anda yakin ingin menghapus akun <b>' + esc(u.name || u.email) + ' (' + esc(u.email) + ')</b>?<br><br>Akun ini tidak akan dapat login lagi ke Admin CMS.</p>'
+        + '<div style="display:flex;gap:10px">'
+        + '<button class="btn btn-red" style="flex:1" id="u-conf-del">Hapus Akun</button>'
+        + '<button type="button" class="btn btn-line" id="u-cancel-del">Batal</button>'
+        + '</div></div></div>';
+
+      qs('#u-cancel-del').onclick = closeModal;
+      qs('#u-conf-del').onclick = async () => {
+        const btn = qs('#u-conf-del');
+        btn.disabled = true;
+        btn.textContent = 'Menghapus...';
+        const res = await deleteUser(u.id);
+        if (res.success) {
+          toast('Pengguna berhasil dihapus');
+          closeModal();
+          loadUsers();
+        } else {
+          btn.disabled = false;
+          btn.textContent = 'Hapus Akun';
+          toast(res.message || 'Gagal menghapus pengguna');
+        }
+      };
+    };
+
+    if (addBtn) addBtn.onclick = openAddModal;
+    loadUsers();
   }
 
   if (T === 'company') {

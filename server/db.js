@@ -57,8 +57,10 @@ export async function initDB() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS admin_users (
       id INT AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(128) NOT NULL DEFAULT 'Admin',
       email VARCHAR(128) NOT NULL UNIQUE,
       password_hash VARCHAR(255) NOT NULL,
+      role VARCHAR(32) NOT NULL DEFAULT 'admin',
       mfa_enabled TINYINT(1) NOT NULL DEFAULT 0,
       totp_secret VARCHAR(64) DEFAULT NULL,
       totp_temp_secret VARCHAR(64) DEFAULT NULL,
@@ -67,7 +69,7 @@ export async function initDB() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   `);
 
-  // Ensure MFA columns exist for existing installations
+  // Ensure MFA and multi-user columns exist for existing installations
   try {
     const [cols] = await pool.query(
       "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'admin_users'",
@@ -75,6 +77,12 @@ export async function initDB() {
     );
     const colNames = new Set(cols.map(c => c.COLUMN_NAME));
 
+    if (!colNames.has('name')) {
+      await pool.query("ALTER TABLE admin_users ADD COLUMN name VARCHAR(128) NOT NULL DEFAULT 'Admin'");
+    }
+    if (!colNames.has('role')) {
+      await pool.query("ALTER TABLE admin_users ADD COLUMN role VARCHAR(32) NOT NULL DEFAULT 'admin'");
+    }
     if (!colNames.has('mfa_enabled')) {
       await pool.query('ALTER TABLE admin_users ADD COLUMN mfa_enabled TINYINT(1) NOT NULL DEFAULT 0');
     }
