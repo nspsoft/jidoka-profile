@@ -18,13 +18,52 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = Number(process.env.PORT) || 3002;
 
-// Middlewares
-app.use(cors());
+// Hide Express fingerprinting
+app.disable('x-powered-by');
+
+// Security Headers Middleware
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+
+// Controlled CORS Policy
+const allowedOrigins = (process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map(s => s.trim().toLowerCase())
+  .filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow non-browser requests or local scripts
+    if (!origin) return callback(null, true);
+    const low = origin.toLowerCase();
+    if (
+      low.includes('jidoka.co.id') ||
+      low.includes('localhost') ||
+      low.includes('127.0.0.1') ||
+      allowedOrigins.includes(low)
+    ) {
+      return callback(null, true);
+    }
+    return callback(new Error('Blocked by CORS security policy'));
+  },
+  credentials: true
+}));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Static uploads directory
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Static uploads directory with security sandbox headers
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  setHeaders: (res, filePath) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; media-src 'self'; sandbox");
+  }
+}));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

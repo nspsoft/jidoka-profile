@@ -1,14 +1,26 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
 import { getPool } from '../db.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, JWT_SECRET } from '../middleware/auth.js';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'jri-super-secret-jwt-key-2026';
+
+// Anti Brute-Force Rate Limiter: Max 10 attempts per 15 minutes per IP
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Terlalu banyak percobaan login gagal dari IP ini. Silakan tunggu 15 menit sebelum mencoba kembali.'
+  }
+});
 
 // POST /api/auth/login
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body || {};
     if (!email || !password) {
@@ -59,8 +71,11 @@ router.post('/logout', (req, res) => {
 router.patch('/password', requireAuth, async (req, res) => {
   try {
     const { password } = req.body || {};
-    if (!password || password.length < 6) {
-      return res.status(400).json({ success: false, message: 'Password minimal 6 karakter' });
+    if (!password || password.length < 8) {
+      return res.status(400).json({ success: false, message: 'Password minimal 8 karakter' });
+    }
+    if (!/(?=.*[a-zA-Z])(?=.*[0-9])/.test(password)) {
+      return res.status(400).json({ success: false, message: 'Password harus mengandung kombinasi huruf dan angka' });
     }
 
     const hash = await bcrypt.hash(password, 10);

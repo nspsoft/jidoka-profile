@@ -26,21 +26,60 @@ const storage = multer.diskStorage({
   }
 });
 
+const ALLOWED_EXTS = new Set([
+  '.png', '.jpg', '.jpeg', '.webp', '.svg', '.gif', '.ico',
+  '.mp4', '.webm', '.pdf', '.docx', '.xlsx', '.doc', '.xls'
+]);
+
+const FORBIDDEN_EXTS = new Set([
+  '.php', '.phtml', '.php3', '.php4', '.php5', '.phar',
+  '.sh', '.bash', '.exe', '.bat', '.cmd', '.js', '.mjs',
+  '.cjs', '.html', '.htm', '.pl', '.cgi', '.jar', '.vbs', '.py'
+]);
+
 const upload = multer({
   storage,
-  limits: { fileSize: 100 * 1024 * 1024 } // 100 MB max for videos & documents
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100 MB max
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (FORBIDDEN_EXTS.has(ext)) {
+      return cb(new Error('Tipe file berbahaya dan dilarang untuk diunggah'));
+    }
+    if (!ALLOWED_EXTS.has(ext)) {
+      return cb(new Error('Format file tidak didukung. Format yang diizinkan: gambar, PDF, dokumen, dan video.'));
+    }
+    cb(null, true);
+  }
 });
 
 const router = express.Router();
 
-// POST /api/upload - admin only
-router.post('/', requireAuth, upload.single('file'), async (req, res) => {
+// POST /api/upload - admin only with strict extension & SVG XSS validation
+router.post('/', requireAuth, (req, res, next) => {
+  upload.single('file')(req, res, err => {
+    if (err) {
+      return res.status(400).json({ success: false, message: err.message || 'Gagal memproses file' });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'Tidak ada file yang diunggah' });
     }
 
     const file = req.file;
+    const ext = path.extname(file.originalname).toLowerCase();
+
+    // Deep inspection for SVG to block Stored XSS vectors
+    if (ext === '.svg') {
+      const content = fs.readFileSync(file.path, 'utf8');
+      if (/<script|javascript:|data:text\/html|\bon[a-z]+\s*=/i.test(content)) {
+        try { fs.unlinkSync(file.path); } catch (e) {}
+        return res.status(400).json({ success: false, message: 'File SVG mengandung skrip berbahaya yang dilarang' });
+      }
+    }
+
     const publicUrl = `/uploads/${file.filename}`;
 
     const pool = getPool();

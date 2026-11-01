@@ -1,6 +1,11 @@
 export const qs = (s, c = document) => c.querySelector(s);
 export const qa = (s, c = document) => [...c.querySelectorAll(s)];
-export const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+export const esc = s => String(s == null ? '' : s)
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
 export const lines = t => String(t || '').split('\n').map(s => s.trim()).filter(Boolean);
 export const parsePairs = t => lines(t).map(l => {
   const i = l.indexOf('|');

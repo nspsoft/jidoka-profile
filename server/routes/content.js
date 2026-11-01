@@ -5,6 +5,11 @@ import { runSeed } from '../seed.js';
 
 const router = express.Router();
 
+const ALLOWED_COLLECTIONS = new Set([
+  'company', 'products', 'pillars', 'why', 'industries', 'tour',
+  'news', 'way', 'certs', 'mach', 'caps', 'gov', 'hist', 'resources'
+]);
+
 // GET /api/content/all - public, returns entire site content as map { products, news, ... }
 router.get('/all', async (req, res) => {
   try {
@@ -29,6 +34,9 @@ router.get('/all', async (req, res) => {
 router.get('/:collection', async (req, res) => {
   try {
     const { collection } = req.params;
+    if (!ALLOWED_COLLECTIONS.has(collection)) {
+      return res.status(404).json({ success: false, message: 'Koleksi tidak ditemukan' });
+    }
     const pool = getPool();
     const [rows] = await pool.query('SELECT data FROM content WHERE collection = ?', [collection]);
 
@@ -57,7 +65,7 @@ router.post('/import', requireAuth, async (req, res) => {
     try {
       await conn.beginTransaction();
       for (const [key, value] of Object.entries(payload)) {
-        if (key === 'settings') continue; // don't overwrite server admin auth with old password
+        if (key === 'settings' || !ALLOWED_COLLECTIONS.has(key)) continue; // ignore sensitive settings and invalid collections
         await conn.query(
           `INSERT INTO content (collection, data) VALUES (?, ?)
            ON DUPLICATE KEY UPDATE data = VALUES(data)`,
@@ -82,6 +90,9 @@ router.post('/import', requireAuth, async (req, res) => {
 router.post('/:collection', requireAuth, async (req, res) => {
   try {
     const { collection } = req.params;
+    if (!ALLOWED_COLLECTIONS.has(collection)) {
+      return res.status(400).json({ success: false, message: 'Nama koleksi tidak valid' });
+    }
     const data = req.body;
     if (data === undefined) {
       return res.status(400).json({ success: false, message: 'Data wajib diisi' });

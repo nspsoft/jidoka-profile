@@ -36,6 +36,15 @@ async function getCompanyEmails() {
   };
 }
 
+function escHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // Helper to send email notification
 async function sendNotificationEmail(type, payload, refId) {
   const host = process.env.SMTP_HOST;
@@ -58,10 +67,12 @@ async function sendNotificationEmail(type, payload, refId) {
     auth: { user, pass }
   });
 
-  const subject = `[JRI Website Lead] ${refId} - ${type.toUpperCase()}: ${payload['Company'] || payload['Organization'] || payload['Name'] || 'New Lead'}`;
+  const rawTitle = payload['Company'] || payload['Organization'] || payload['Name'] || payload['Nama'] || 'New Lead';
+  const cleanTitle = String(rawTitle).replace(/[\r\n]/g, '').slice(0, 80);
+  const subject = `[JRI Website Lead] ${refId} - ${type.toUpperCase()}: ${cleanTitle}`;
   
   const htmlRows = Object.entries(payload)
-    .map(([k, v]) => `<tr><td style="padding:6px 12px;border:1px solid #ddd;font-weight:bold;color:#16336e">${k}</td><td style="padding:6px 12px;border:1px solid #ddd">${v}</td></tr>`)
+    .map(([k, v]) => `<tr><td style="padding:6px 12px;border:1px solid #ddd;font-weight:bold;color:#16336e">${escHtml(k)}</td><td style="padding:6px 12px;border:1px solid #ddd">${escHtml(v)}</td></tr>`)
     .join('');
 
   const html = `
@@ -112,11 +123,24 @@ router.post('/', leadLimiter, async (req, res) => {
       return res.json({ success: true, ref: 'RFQ-2026-' + Math.floor(1000 + Math.random() * 9000) });
     }
 
+    // Limit payload size & field counts to prevent memory exhaustion
+    const entries = Object.entries(payload);
+    if (entries.length > 30) {
+      return res.status(400).json({ success: false, message: 'Jumlah field formulir melebihi batas wajar' });
+    }
+
+    const sanitizedPayload = {};
+    for (const [k, v] of entries) {
+      const cleanKey = String(k).slice(0, 80);
+      const cleanVal = typeof v === 'string' ? v.slice(0, 3000) : (typeof v === 'number' || typeof v === 'boolean' ? v : String(v).slice(0, 500));
+      sanitizedPayload[cleanKey] = cleanVal;
+    }
+
     // Required field validation server-side
-    if (!payload.Name && !payload['Nama']) {
+    if (!sanitizedPayload.Name && !sanitizedPayload['Nama']) {
       return res.status(400).json({ success: false, message: 'Nama wajib diisi' });
     }
-    if (!payload.Email) {
+    if (!sanitizedPayload.Email) {
       return res.status(400).json({ success: false, message: 'Email wajib diisi' });
     }
 
@@ -126,11 +150,11 @@ router.post('/', leadLimiter, async (req, res) => {
     const pool = getPool();
     const [result] = await pool.query(
       'INSERT INTO leads (type, payload, status) VALUES (?, ?, "new")',
-      [type, JSON.stringify({ ...payload, refId })]
+      [type, JSON.stringify({ ...sanitizedPayload, refId })]
     );
 
     // Send notification email asynchronously (do not block response)
-    sendNotificationEmail(type, payload, refId).catch(err => console.error('Email error:', err));
+    sendNotificationEmail(type, sanitizedPayload, refId).catch(err => console.error('Email error:', err));
 
     res.json({
       success: true,

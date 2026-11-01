@@ -3,7 +3,11 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'jri-super-secret-jwt-key-2026';
+export const JWT_SECRET = process.env.JWT_SECRET || 'jri-super-secret-jwt-key-2026';
+
+if (!process.env.JWT_SECRET) {
+  console.warn('⚠️ [SECURITY WARNING] JWT_SECRET is not set in .env! Please define a cryptographically random JWT_SECRET in production.');
+}
 
 export function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization;
