@@ -9,6 +9,8 @@ import authRoutes from './routes/auth.js';
 import contentRoutes from './routes/content.js';
 import leadsRoutes from './routes/leads.js';
 import uploadRoutes from './routes/upload.js';
+import auditRoutes from './routes/audit.js';
+import analyticsRoutes from './routes/analytics.js';
 
 dotenv.config();
 
@@ -75,6 +77,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/content', contentRoutes);
 app.use('/api/leads', leadsRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/audit-logs', auditRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

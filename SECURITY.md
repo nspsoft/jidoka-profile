@@ -71,6 +71,15 @@ Sistem mengadopsi pendekatan *Zero-Trust* dan pertahanan berlapis (*Defense-in-D
 - **Restricted CORS**:
   - Permintaan lintas domain (CORS) dibatasi hanya untuk domain resmi (`jidoka.co.id`, `https://jidoka.co.id`) serta lingkungan dev lokal yang sah.
 
+### E. Jejak Audit & Privasi Pengunjung (Compliance & Privacy)
+- **Immutable Audit Trail (`audit_logs`)**:
+  - Seluruh mutasi kritis (Login/Logout, MFA Setup/Disable, Reset MFA, User CRUD, Content Updates, RFQ Changes, Uploads) dicatat dengan metadata lengkap: `user_id`, `user_email`, `user_name`, `role`, `action`, `entity_type`, `entity_id`, payload diff/details (JSON), IP Address asli (`x-forwarded-for`), User-Agent, dan timestamp.
+  - Log audit bersifat *append-only* (tidak disediakan endpoint edit/manipulasi log dari CMS).
+- **Privacy-Preserving Visitor Analytics (`visitor_pageviews`)**:
+  - Mengadopsi standar kepatuhan UU PDP & GDPR: Bebas dari cookie pihak ketiga yang memberatkan browser pengunjung.
+  - Pengunjung unik dihitung secara aman menggunakan *Daily Anonymized Hash* (`SHA-256(IP + UA + Salt + Date)`). IP address asli pengunjung tidak disimpan mentah pada tabel analitik.
+  - Bot dan web crawler mesin pencari otomatis difilter sehingga metrik laporan 100% mencerminkan pengunjung manusia asli.
+
 ---
 
 ## 3. ⚙️ Konfigurasi Hardening Server Nginx (aaPanel / VPS)

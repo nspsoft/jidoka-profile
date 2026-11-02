@@ -5,6 +5,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { getPool } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
+import { recordAuditLog } from '../utils/audit.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -87,6 +88,14 @@ router.post('/', requireAuth, (req, res, next) => {
       `INSERT INTO uploads (filename, orig_name, mime_type, size_bytes, url) VALUES (?, ?, ?, ?, ?)`,
       [file.filename, file.originalname, file.mimetype, file.size, publicUrl]
     );
+
+    recordAuditLog({
+      req,
+      action: 'upload.create',
+      entityType: 'upload',
+      entityId: file.filename,
+      details: { orig_name: file.originalname, mime: file.mimetype, size: file.size, url: publicUrl }
+    });
 
     res.json({
       success: true,

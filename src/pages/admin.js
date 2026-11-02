@@ -1,5 +1,6 @@
 import { DB, dbRead, dbWrite, DEF, dP, dN, dC, dR, dCo, dPillars, dWhy, dIndustries, dTour, dMach, dFlow, dCerts, dWay, dHist, dGov } from '../data/db.js';
 import { isLogged, doLogin, doMfaLogin, doLogout, authFetch, getUser, getMfaStatus, setupMfa, verifyMfaSetup, disableMfa, regenerateBackupCodes, getUsers, createUser, updateUser, deleteUser, resetUserMfa } from '../data/auth.js';
+import { getAnalyticsSummary, downloadAnalyticsCsv, getAuditLogs, downloadAuditLogsCsv } from '../data/analytics.js';
 import { esc, qs, qa, lines, parsePairs, slug } from '../components/dom.js';
 import { logo, ic } from '../components/icons.js';
 import { toast } from '../components/toast.js';
@@ -457,6 +458,45 @@ export function aUsers() {
     + '<div id="user-modal-container"></div>';
 }
 
+export function aAnalytics() {
+  return '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">'
+    + '<div><h3 style="margin:0">Laporan & Statistik Pengunjung Web</h3>'
+    + '<p class="tiny" style="margin-top:4px">Pelacakan analitik pengunjung website mandiri, privacy-friendly (tanpa cookies pelacak pihak ketiga), dan real-time.</p></div>'
+    + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+    + '<div class="adm-subnav" style="margin:0" id="analytics-range-btns">'
+    + '<button class="on" data-range="7d">7 Hari Terakhir</button>'
+    + '<button data-range="30d">30 Hari Terakhir</button>'
+    + '<button data-range="this_month">Bulan Ini</button>'
+    + '<button data-range="today">Hari Ini</button>'
+    + '</div>'
+    + '<button class="btn btn-line btn-sm" id="btn-export-analytics">' + ic('download') + ' Ekspor CSV</button>'
+    + '</div></div>'
+    + '<div id="analytics-content-box" style="margin-top:18px"><p class="tiny" style="color:var(--mut)">Memuat statistik pengunjung...</p></div>';
+}
+
+export function aAudit() {
+  return '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">'
+    + '<div><h3 style="margin:0">Jejak Audit Aktivitas Sistem (Audit Log)</h3>'
+    + '<p class="tiny" style="margin-top:4px">Rekaman kronologis seluruh aktivitas login, perubahan data konten, akun pengguna, dan tindakan staf.</p></div>'
+    + '<button class="btn btn-line btn-sm" id="btn-export-audit">' + ic('download') + ' Ekspor Log CSV</button>'
+    + '</div>'
+    + '<div class="card" style="margin-top:16px;padding:12px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--bg-alt);border:1px solid var(--bdr);border-radius:8px">'
+    + '<div style="flex:1;min-width:200px"><input type="search" id="audit-search" placeholder="Cari pengguna, email, aksi, entitas..." class="inp" style="width:100%;padding:6px 10px;font-size:13px"></div>'
+    + '<div style="min-width:160px"><select id="audit-cat" class="inp" style="width:100%;padding:6px 10px;font-size:13px">'
+    + '<option value="">Semua Kategori</option>'
+    + '<option value="auth">Autentikasi & Login</option>'
+    + '<option value="user">Kelola Pengguna</option>'
+    + '<option value="content">Konten Website</option>'
+    + '<option value="lead">Pesan Masuk (RFQ)</option>'
+    + '<option value="upload">Unggah File</option>'
+    + '</select></div>'
+    + '<button class="btn btn-pri btn-sm" id="btn-filter-audit">' + ic('search') + ' Filter</button>'
+    + '<button class="btn btn-line btn-sm" id="btn-reset-audit">Reset</button>'
+    + '</div>'
+    + '<div id="audit-table-box" style="margin-top:16px"><p class="tiny" style="color:var(--mut)">Memuat jejak audit...</p></div>'
+    + '<div id="audit-modal-container"></div>';
+}
+
 /* ============================================================
    KONTEN BERANDA: Banner Hero, 4 Pilar, 4 Alasan, Sektor Industri
    ============================================================ */
@@ -774,6 +814,7 @@ export function renderAdmin(tab, sub) {
   const tabs = [
     ['dash', 'Dashboard'],
     ['inbox', 'Pesan Masuk (RFQ)' + (unhandled ? ' (' + unhandled + ')' : '')],
+    ['analytics', 'Statistik Pengunjung'],
     ['profile', 'Profil & Logo'],
     ['home-content', 'Konten Beranda'],
     ['products', 'Produk'],
@@ -783,12 +824,14 @@ export function renderAdmin(tab, sub) {
     ['caps', 'Kapabilitas & Solusi'],
     ['resources', 'Dokumen'],
     ['users', 'Kelola Pengguna'],
+    ['audit', 'Jejak Audit (Audit Log)'],
     ['company', 'Kontak & Akses'],
     ['backup', 'Backup & Pulihkan']
   ];
   let body = '';
   try {
     body = tab === 'inbox' ? aInbox()
+      : tab === 'analytics' ? aAnalytics()
       : tab === 'profile' ? aProfile()
       : tab === 'home-content' ? aHomeContent(sub)
       : tab === 'products' ? aProducts()
@@ -798,6 +841,7 @@ export function renderAdmin(tab, sub) {
       : tab === 'caps' ? aCaps()
       : tab === 'resources' ? aRes()
       : tab === 'users' ? aUsers()
+      : tab === 'audit' ? aAudit()
       : tab === 'company' ? aCompany()
       : tab === 'backup' ? aBackup()
       : aDash();
@@ -2095,6 +2139,221 @@ export function mountAdmin(seg, router, goHash) {
     }
   }
 
+  if (T === 'analytics') {
+    const box = qs('#analytics-content-box');
+    const rangeBtns = qa('#analytics-range-btns button');
+    const expBtn = qs('#btn-export-analytics');
+    let currentRange = '7d';
+
+    const renderChart = trend => {
+      if (!trend || trend.length === 0) {
+        return '<div style="padding:40px 20px;text-align:center;color:var(--mut);background:var(--bg-alt);border-radius:8px;border:1px dashed var(--bdr)">Belum ada data kunjungan pada rentang tanggal ini. Kunjungan baru di halaman publik website akan otomatis tampil di sini.</div>';
+      }
+
+      const width = 760;
+      const height = 220;
+      const padL = 40;
+      const padR = 24;
+      const padT = 24;
+      const padB = 32;
+
+      const chartW = width - padL - padR;
+      const chartH = height - padT - padB;
+
+      const maxVal = Math.max(...trend.map(t => Math.max(t.pageviews || 0, t.unique_visitors || 0)), 5);
+      const yMax = Math.ceil(maxVal * 1.15);
+
+      const n = trend.length;
+      const getX = i => n <= 1 ? padL + chartW / 2 : padL + (i / (n - 1)) * chartW;
+      const getY = v => padT + chartH - (v / yMax) * chartH;
+
+      let gridLines = '';
+      for (let s = 0; s <= 4; s++) {
+        const val = Math.round((yMax / 4) * s);
+        const y = getY(val);
+        gridLines += `<line x1="${padL}" y1="${y}" x2="${width - padR}" y2="${y}" stroke="var(--bdr)" stroke-dasharray="3 3" />`;
+        gridLines += `<text x="${padL - 8}" y="${y + 3}" text-anchor="end" font-size="10" fill="var(--mut)">${val}</text>`;
+      }
+
+      const ptsPv = trend.map((t, i) => `${getX(i)},${getY(t.pageviews)}`).join(' ');
+      const areaPv = `M ${getX(0)},${padT + chartH} ` + trend.map((t, i) => `L ${getX(i)},${getY(t.pageviews)}`).join(' ') + ` L ${getX(n - 1)},${padT + chartH} Z`;
+      const ptsUv = trend.map((t, i) => `${getX(i)},${getY(t.unique_visitors)}`).join(' ');
+
+      let xLabels = '';
+      const step = n > 14 ? Math.ceil(n / 7) : 1;
+      trend.forEach((t, i) => {
+        if (i % step === 0 || i === n - 1) {
+          const parts = t.date.split('-');
+          const lbl = `${parts[2]}/${parts[1]}`;
+          xLabels += `<text x="${getX(i)}" y="${height - 10}" text-anchor="middle" font-size="10" fill="var(--mut)">${lbl}</text>`;
+        }
+      });
+
+      let dots = '';
+      trend.forEach((t, i) => {
+        const x = getX(i);
+        const yPv = getY(t.pageviews);
+        const yUv = getY(t.unique_visitors);
+        dots += `<circle cx="${x}" cy="${yPv}" r="3.5" fill="#16336e" stroke="#ffffff" stroke-width="1.5"><title>${t.date}: ${t.pageviews} Kunjungan</title></circle>`;
+        dots += `<circle cx="${x}" cy="${yUv}" r="3.5" fill="#d71920" stroke="#ffffff" stroke-width="1.5"><title>${t.date}: ${t.unique_visitors} Pengunjung Unik</title></circle>`;
+      });
+
+      return `
+        <div style="overflow-x:auto;padding-bottom:6px">
+          <svg viewBox="0 0 ${width} ${height}" style="width:100%;max-width:100%;height:auto;display:block">
+            <defs>
+              <linearGradient id="pvGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#16336e" stop-opacity="0.25"/>
+                <stop offset="100%" stop-color="#16336e" stop-opacity="0.0"/>
+              </linearGradient>
+            </defs>
+            ${gridLines}
+            ${xLabels}
+            <path d="${areaPv}" fill="url(#pvGrad)" />
+            <polyline fill="none" stroke="#16336e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="${ptsPv}" />
+            <polyline fill="none" stroke="#d71920" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4 3" points="${ptsUv}" />
+            ${dots}
+          </svg>
+        </div>
+        <div style="display:flex;justify-content:center;gap:20px;margin-top:10px;font-size:12px;color:var(--navy)">
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:3px;background:#16336e;display:inline-block;border-radius:2px"></span> <b>Total Kunjungan (Pageviews)</b></span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:3px;background:#d71920;display:inline-block;border-radius:2px"></span> <b>Pengunjung Unik (Unique Visitors)</b></span>
+        </div>
+      `;
+    };
+
+    const loadAnalytics = async () => {
+      if (!box) return;
+      box.innerHTML = '<p class="tiny" style="color:var(--mut)">Memuat statistik pengunjung...</p>';
+      const res = await getAnalyticsSummary(currentRange);
+      if (!res.success || !res.data) {
+        box.innerHTML = '<p class="tiny" style="color:var(--red)">' + esc(res.message || 'Gagal memuat analitik') + '</p>';
+        return;
+      }
+
+      const d = res.data;
+      const s = d.summary || {};
+      const topPages = d.topPages || [];
+      const devices = d.devices || [];
+      const browsers = d.browsers || [];
+      const referrers = d.referrers || [];
+
+      let html = '';
+
+      // 1. KPI Cards
+      html += '<div class="stat-mini" style="margin-top:0">'
+        + '<div><b>' + (s.totalPageviews || 0).toLocaleString('id-ID') + '</b><span class="mini" style="display:block;margin-top:4px">Total Kunjungan (Pageviews)</span></div>'
+        + '<div><b>' + (s.uniqueVisitors || 0).toLocaleString('id-ID') + '</b><span class="mini" style="display:block;margin-top:4px">Pengunjung Unik</span></div>'
+        + '<div><b>' + (s.totalLeads || 0).toLocaleString('id-ID') + '</b><span class="mini" style="display:block;margin-top:4px">Permintaan RFQ</span></div>'
+        + '<div><b>' + (s.conversionRate || 0) + '%</b><span class="mini" style="display:block;margin-top:4px">Rasio Konversi RFQ</span></div>'
+        + '</div>';
+
+      // 2. Trend Chart
+      html += '<div class="card" style="margin-top:18px;padding:20px;border:1px solid var(--bdr);border-radius:8px;background:var(--bg)">'
+        + '<h4 style="margin:0 0 16px;font-size:14px;color:var(--navy);font-weight:700">Grafik Tren Kunjungan Harian</h4>'
+        + renderChart(d.trend || [])
+        + '</div>';
+
+      // 3. 2-Column Details
+      html += '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:18px;margin-top:18px">';
+
+      // Left Column: Top Pages
+      html += '<div class="card" style="padding:18px;border:1px solid var(--bdr);border-radius:8px;background:var(--bg)">'
+        + '<h4 style="margin:0 0 14px;font-size:14px;color:var(--navy);font-weight:700">Top Halaman & Produk Dikunjungi</h4>';
+
+      if (topPages.length === 0) {
+        html += '<p class="tiny" style="color:var(--mut)">Belum ada data halaman dikunjungi.</p>';
+      } else {
+        html += '<div class="tbl-wrap" style="border:none"><table style="font-size:12px;margin:0"><thead><tr><th style="width:36px">#</th><th>Halaman / Judul</th><th style="text-align:right">Kunjungan</th><th style="width:80px;text-align:right">%</th></tr></thead><tbody>';
+        topPages.forEach((p, idx) => {
+          html += '<tr>'
+            + '<td style="color:var(--mut);font-weight:700">' + (idx + 1) + '</td>'
+            + '<td><b>' + esc(p.title || p.path) + '</b><div class="tiny" style="color:var(--mut);font-family:monospace">' + esc(p.path) + '</div></td>'
+            + '<td style="text-align:right;font-weight:700">' + p.views.toLocaleString('id-ID') + '</td>'
+            + '<td style="text-align:right"><div style="display:flex;align-items:center;gap:6px;justify-content:flex-end"><span>' + p.percent + '%</span><div style="width:36px;height:6px;background:var(--bg-alt);border-radius:3px;overflow:hidden"><div style="width:' + p.percent + '%;height:100%;background:#16336e"></div></div></div></td>'
+            + '</tr>';
+        });
+        html += '</tbody></table></div>';
+      }
+      html += '</div>';
+
+      // Right Column: Devices, Browsers, Referrers
+      html += '<div style="display:flex;flex-direction:column;gap:18px">';
+
+      // Devices Card
+      html += '<div class="card" style="padding:18px;border:1px solid var(--bdr);border-radius:8px;background:var(--bg)">'
+        + '<h4 style="margin:0 0 12px;font-size:14px;color:var(--navy);font-weight:700">Perangkat Pengunjung (Device)</h4>';
+      if (devices.length === 0) {
+        html += '<p class="tiny" style="color:var(--mut)">Belum ada data perangkat.</p>';
+      } else {
+        devices.forEach(dev => {
+          const label = dev.type === 'mobile' ? 'Ponsel (Mobile)' : dev.type === 'tablet' ? 'Tablet' : 'Komputer (Desktop)';
+          html += '<div style="margin-bottom:10px">'
+            + '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><b>' + label + '</b><span>' + dev.count + ' (' + dev.percent + '%)</span></div>'
+            + '<div style="width:100%;height:8px;background:var(--bg-alt);border-radius:4px;overflow:hidden"><div style="width:' + dev.percent + '%;height:100%;background:#16336e;border-radius:4px"></div></div>'
+            + '</div>';
+        });
+      }
+      html += '</div>';
+
+      // Browsers Card
+      html += '<div class="card" style="padding:18px;border:1px solid var(--bdr);border-radius:8px;background:var(--bg)">'
+        + '<h4 style="margin:0 0 12px;font-size:14px;color:var(--navy);font-weight:700">Browser Digunakan</h4>';
+      if (browsers.length === 0) {
+        html += '<p class="tiny" style="color:var(--mut)">Belum ada data browser.</p>';
+      } else {
+        browsers.forEach(b => {
+          html += '<div style="margin-bottom:8px">'
+            + '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>' + esc(b.browser) + '</span><span style="font-weight:600">' + b.count + ' (' + b.percent + '%)</span></div>'
+            + '<div style="width:100%;height:6px;background:var(--bg-alt);border-radius:3px;overflow:hidden"><div style="width:' + b.percent + '%;height:100%;background:#059669;border-radius:3px"></div></div>'
+            + '</div>';
+        });
+      }
+      html += '</div>';
+
+      // Referrers Card
+      html += '<div class="card" style="padding:18px;border:1px solid var(--bdr);border-radius:8px;background:var(--bg)">'
+        + '<h4 style="margin:0 0 12px;font-size:14px;color:var(--navy);font-weight:700">Sumber Kunjungan (Referrer)</h4>';
+      if (referrers.length === 0) {
+        html += '<p class="tiny" style="color:var(--mut)">Belum ada data rujukan.</p>';
+      } else {
+        referrers.forEach(r => {
+          html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--bdr);font-size:12px">'
+            + '<span>' + esc(r.referrer) + '</span>'
+            + '<span style="font-weight:700">' + r.count + ' kunjungan</span>'
+            + '</div>';
+        });
+      }
+      html += '</div>';
+
+      html += '</div></div>';
+      box.innerHTML = html;
+    };
+
+    rangeBtns.forEach(btn => {
+      btn.onclick = () => {
+        rangeBtns.forEach(b => b.classList.remove('on'));
+        btn.classList.add('on');
+        currentRange = btn.dataset.range;
+        loadAnalytics();
+      };
+    });
+
+    if (expBtn) {
+      expBtn.onclick = async () => {
+        expBtn.disabled = true;
+        expBtn.textContent = 'Mengunduh...';
+        const ok = await downloadAnalyticsCsv(currentRange);
+        expBtn.disabled = false;
+        expBtn.innerHTML = ic('download') + ' Ekspor CSV';
+        if (ok) toast('Laporan pengunjung CSV berhasil diunduh');
+        else toast('Gagal mengunduh CSV');
+      };
+    }
+
+    loadAnalytics();
+  }
+
   if (T === 'users') {
     const tableBox = qs('#users-table-box');
     const modalBox = qs('#user-modal-container');
@@ -2335,6 +2594,200 @@ export function mountAdmin(seg, router, goHash) {
 
     if (addBtn) addBtn.onclick = openAddModal;
     loadUsers();
+  }
+
+  if (T === 'audit') {
+    const tableBox = qs('#audit-table-box');
+    const modalBox = qs('#audit-modal-container');
+    const sInput = qs('#audit-search');
+    const catSelect = qs('#audit-cat');
+    const filterBtn = qs('#btn-filter-audit');
+    const resetBtn = qs('#btn-reset-audit');
+    const expBtn = qs('#btn-export-audit');
+
+    let curPage = 1;
+
+    const actionBadge = act => {
+      const a = String(act || '');
+      if (a === 'auth.login.success') return '<span class="badge" style="background:#d1fae5;color:#065f46">Login Sukses</span>';
+      if (a === 'auth.login.failed') return '<span class="badge" style="background:#fee2e2;color:#991b1b">Login Gagal</span>';
+      if (a === 'auth.login.challenge_mfa') return '<span class="badge" style="background:#fef3c7;color:#92400e">Tantangan MFA</span>';
+      if (a === 'auth.mfa.verify_success') return '<span class="badge" style="background:#ede9fe;color:#5b21b6">MFA Terverifikasi</span>';
+      if (a === 'auth.mfa.backup_code_used') return '<span class="badge" style="background:#fef3c7;color:#92400e">MFA Kode Darurat</span>';
+      if (a === 'auth.mfa.setup') return '<span class="badge" style="background:#ede9fe;color:#5b21b6">MFA Diaktifkan</span>';
+      if (a === 'auth.mfa.disable') return '<span class="badge" style="background:#fef3c7;color:#92400e">MFA Dinonaktifkan</span>';
+      if (a === 'auth.password.change') return '<span class="badge" style="background:#e0e7ff;color:#3730a3">Ganti Kata Sandi</span>';
+      if (a === 'user.create') return '<span class="badge" style="background:#e0f2fe;color:#075985">Tambah Pengguna</span>';
+      if (a === 'user.update') return '<span class="badge" style="background:#e0f2fe;color:#075985">Ubah Pengguna</span>';
+      if (a === 'user.delete') return '<span class="badge" style="background:#fee2e2;color:#991b1b">Hapus Pengguna</span>';
+      if (a === 'user.reset_mfa') return '<span class="badge" style="background:#fef3c7;color:#92400e">Reset MFA Staf</span>';
+      if (a === 'content.update') return '<span class="badge" style="background:#dbeafe;color:#1e40af">Update Konten</span>';
+      if (a === 'content.import') return '<span class="badge" style="background:#f3e8ff;color:#6b21a8">Impor Backup</span>';
+      if (a === 'content.reset') return '<span class="badge" style="background:#fee2e2;color:#991b1b">Reset Konten</span>';
+      if (a === 'lead.status_update') return '<span class="badge" style="background:#ecfdf5;color:#047857">Status RFQ</span>';
+      if (a === 'lead.delete') return '<span class="badge" style="background:#fee2e2;color:#991b1b">Hapus RFQ</span>';
+      if (a === 'upload.create') return '<span class="badge" style="background:#f1f5f9;color:#334155">Upload File</span>';
+      return '<span class="badge" style="background:#f1f5f9;color:#334155">' + esc(a) + '</span>';
+    };
+
+    const loadAudit = async (p = 1) => {
+      curPage = p;
+      if (!tableBox) return;
+      tableBox.innerHTML = '<p class="tiny" style="color:var(--mut)">Memuat jejak audit...</p>';
+
+      const params = {
+        page: curPage,
+        limit: 20,
+        search: (sInput?.value || '').trim(),
+        category: (catSelect?.value || '').trim()
+      };
+
+      const res = await getAuditLogs(params);
+      if (!res.success || !Array.isArray(res.data)) {
+        tableBox.innerHTML = '<p class="tiny" style="color:var(--red)">' + esc(res.message || 'Gagal memuat jejak audit') + '</p>';
+        return;
+      }
+
+      const logs = res.data;
+      const meta = res.meta || { page: 1, per_page: 20, total: 0, total_pages: 1 };
+
+      if (logs.length === 0) {
+        tableBox.innerHTML = '<p class="empty" style="text-align:center;padding:40px 0">Tidak ada catatan audit yang cocok dengan filter.</p>';
+        return;
+      }
+
+      let tbl = '<div class="tbl-wrap"><table style="font-size:12px;margin:0">'
+        + '<thead><tr>'
+        + '<th style="width:130px">Waktu (WIB)</th>'
+        + '<th>Pengguna</th>'
+        + '<th style="text-align:center;width:140px">Aksi</th>'
+        + '<th>Entitas / Objek</th>'
+        + '<th style="width:110px">IP Address</th>'
+        + '<th style="width:70px;text-align:center">Rincian</th>'
+        + '</tr></thead><tbody>';
+
+      logs.forEach(l => {
+        const timeStr = l.created_at
+          ? new Date(l.created_at).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })
+          : '-';
+        const roleBadge = l.role === 'admin'
+          ? '<span class="badge" style="background:#e0f2fe;color:#0369a1;font-size:10px;padding:1px 6px">ADMIN</span>'
+          : l.role === 'editor'
+          ? '<span class="badge" style="background:#fef3c7;color:#b45309;font-size:10px;padding:1px 6px">EDITOR</span>'
+          : '';
+
+        tbl += '<tr>'
+          + '<td style="color:var(--mut);white-space:nowrap">' + esc(timeStr) + '</td>'
+          + '<td><b>' + esc(l.user_name || l.user_email || 'Sistem / Anonim') + '</b> ' + roleBadge + '<div class="tiny" style="color:var(--mut)">' + esc(l.user_email || '-') + '</div></td>'
+          + '<td style="text-align:center">' + actionBadge(l.action) + '</td>'
+          + '<td><b>' + esc(l.entity_type || '-') + '</b><div class="tiny" style="color:var(--mut)">' + esc(l.entity_id || '') + '</div></td>'
+          + '<td style="font-family:monospace;font-size:11px;color:var(--mut)">' + esc(l.ip_address || '-') + '</td>'
+          + '<td style="text-align:center"><button class="btn btn-line btn-sm btn-audit-detail" data-log-id="' + l.id + '" style="padding:2px 8px;font-size:11px">Detail</button></td>'
+          + '</tr>';
+      });
+
+      tbl += '</tbody></table></div>';
+
+      // Pagination Controls
+      const startIdx = (meta.page - 1) * meta.per_page + 1;
+      const endIdx = Math.min(meta.page * meta.per_page, meta.total);
+
+      tbl += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;font-size:12px;color:var(--mut);flex-wrap:wrap;gap:10px">'
+        + '<span>Menampilkan ' + startIdx + '–' + endIdx + ' dari ' + meta.total + ' log aktivitas</span>'
+        + '<div style="display:flex;gap:6px">'
+        + '<button class="btn btn-line btn-sm" id="btn-audit-prev" ' + (meta.page <= 1 ? 'disabled style="opacity:0.5"' : '') + '>← Sebelumnya</button>'
+        + '<span style="padding:4px 8px;font-weight:600">Hal ' + meta.page + ' / ' + meta.total_pages + '</span>'
+        + '<button class="btn btn-line btn-sm" id="btn-audit-next" ' + (meta.page >= meta.total_pages ? 'disabled style="opacity:0.5"' : '') + '>Selanjutnya →</button>'
+        + '</div></div>';
+
+      tableBox.innerHTML = tbl;
+
+      // Bind detail buttons
+      qa('.btn-audit-detail', tableBox).forEach(btn => {
+        btn.onclick = () => {
+          const id = Number(btn.dataset.logId);
+          const found = logs.find(item => item.id === id);
+          if (found && modalBox) {
+            let parsedDetails = found.details;
+            try {
+              if (typeof found.details === 'string') {
+                parsedDetails = JSON.stringify(JSON.parse(found.details), null, 2);
+              }
+            } catch (e) {
+              parsedDetails = found.details;
+            }
+
+            modalBox.innerHTML = '<div class="modal-overlay" style="position:fixed;inset:0;background:rgba(15,23,42,0.6);backdrop-filter:blur(3px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px">'
+              + '<div class="card" style="max-width:580px;width:100%;padding:24px;border-radius:12px;background:#fff;max-height:85vh;overflow-y:auto">'
+              + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'
+              + '<h4 style="margin:0;font-size:16px;color:var(--navy);font-weight:700">Rincian Jejak Audit #' + found.id + '</h4>'
+              + '<button class="btn btn-line btn-sm" id="btn-close-audit-modal" style="padding:4px 8px">✕</button>'
+              + '</div>'
+              + '<table style="font-size:12px;width:100%;margin-bottom:14px"><tbody>'
+              + '<tr><td style="width:120px;color:var(--mut);padding:4px 0">Waktu</td><td><b>' + new Date(found.created_at).toLocaleString('id-ID') + '</b></td></tr>'
+              + '<tr><td style="color:var(--mut);padding:4px 0">Aktor / User</td><td>' + esc(found.user_name || '-') + ' (' + esc(found.user_email || '-') + ') [' + esc(found.role || '-') + ']</td></tr>'
+              + '<tr><td style="color:var(--mut);padding:4px 0">Aksi</td><td>' + actionBadge(found.action) + '</td></tr>'
+              + '<tr><td style="color:var(--mut);padding:4px 0">Entitas</td><td><b>' + esc(found.entity_type || '-') + '</b> ' + esc(found.entity_id || '') + '</td></tr>'
+              + '<tr><td style="color:var(--mut);padding:4px 0">IP Address</td><td><code>' + esc(found.ip_address || '-') + '</code></td></tr>'
+              + '<tr><td style="color:var(--mut);padding:4px 0">User Agent</td><td style="font-size:11px;color:var(--mut);word-break:break-all">' + esc(found.user_agent || '-') + '</td></tr>'
+              + '</tbody></table>'
+              + '<div style="margin-top:10px">'
+              + '<label style="font-size:11px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:0.5px">Data Payload / Perubahan (JSON):</label>'
+              + '<pre style="margin-top:6px;padding:12px;background:#0f172a;color:#38bdf8;border-radius:6px;font-size:11px;max-height:220px;overflow:auto;white-space:pre-wrap">' + esc(parsedDetails || '(Kosong)') + '</pre>'
+              + '</div>'
+              + '<div style="display:flex;justify-content:flex-end;margin-top:16px">'
+              + '<button class="btn btn-line btn-sm" id="btn-close-audit-modal2">Tutup</button>'
+              + '</div></div></div>';
+
+            const closeM = () => { modalBox.innerHTML = ''; };
+            const c1 = qs('#btn-close-audit-modal');
+            const c2 = qs('#btn-close-audit-modal2');
+            if (c1) c1.onclick = closeM;
+            if (c2) c2.onclick = closeM;
+          }
+        };
+      });
+
+      // Bind Prev / Next
+      const prevB = qs('#btn-audit-prev');
+      const nextB = qs('#btn-audit-next');
+      if (prevB && meta.page > 1) prevB.onclick = () => loadAudit(meta.page - 1);
+      if (nextB && meta.page < meta.total_pages) nextB.onclick = () => loadAudit(meta.page + 1);
+    };
+
+    if (filterBtn) filterBtn.onclick = () => loadAudit(1);
+    if (sInput) {
+      sInput.onkeydown = e => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          loadAudit(1);
+        }
+      };
+    }
+    if (resetBtn) {
+      resetBtn.onclick = () => {
+        if (sInput) sInput.value = '';
+        if (catSelect) catSelect.value = '';
+        loadAudit(1);
+      };
+    }
+
+    if (expBtn) {
+      expBtn.onclick = async () => {
+        expBtn.disabled = true;
+        expBtn.textContent = 'Mengekspor...';
+        const ok = await downloadAuditLogsCsv({
+          search: (sInput?.value || '').trim(),
+          category: (catSelect?.value || '').trim()
+        });
+        expBtn.disabled = false;
+        expBtn.innerHTML = ic('download') + ' Ekspor Log CSV';
+        if (ok) toast('Log audit CSV berhasil diunduh');
+        else toast('Gagal mengunduh CSV audit');
+      };
+    }
+
+    loadAudit(1);
   }
 
   if (T === 'company') {

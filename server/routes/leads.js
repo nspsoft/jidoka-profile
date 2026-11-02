@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit';
 import nodemailer from 'nodemailer';
 import { getPool } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
+import { recordAuditLog } from '../utils/audit.js';
 
 const router = express.Router();
 
@@ -210,6 +211,14 @@ router.patch('/:id', requireAuth, async (req, res) => {
     const pool = getPool();
     await pool.query('UPDATE leads SET status = ? WHERE id = ?', [status, id]);
 
+    recordAuditLog({
+      req,
+      action: 'lead.status_update',
+      entityType: 'lead',
+      entityId: id,
+      details: { new_status: status }
+    });
+
     res.json({ success: true, message: 'Status lead berhasil diperbarui', id, status });
   } catch (err) {
     console.error('Update lead status error:', err);
@@ -223,6 +232,14 @@ router.delete('/:id', requireAuth, async (req, res) => {
     const { id } = req.params;
     const pool = getPool();
     await pool.query('DELETE FROM leads WHERE id = ?', [id]);
+
+    recordAuditLog({
+      req,
+      action: 'lead.delete',
+      entityType: 'lead',
+      entityId: id
+    });
+
     res.json({ success: true, message: 'Lead berhasil dihapus' });
   } catch (err) {
     console.error('Delete lead error:', err);

@@ -15,6 +15,7 @@ import { renderResources } from './pages/resources.js';
 import { renderContact, mountContact } from './pages/contact.js';
 import { renderAdmin, mountAdmin } from './pages/admin.js';
 import { updateSEO } from './seo.js';
+import { trackPageView } from './data/analytics.js';
 
 let lastKey = null;
 let CURPAGE = 'home';
@@ -83,6 +84,9 @@ export function router(force) {
     buildChrome();
     CURPAGE = page;
     updateSEO(page, seg);
+    if (page !== 'admin') {
+      trackPageView(key, document.title);
+    }
     syncHdr();
     closeMM();
     window.scrollTo(0, 0);

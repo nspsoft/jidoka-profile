@@ -2,6 +2,7 @@ import express from 'express';
 import { getPool } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { runSeed } from '../seed.js';
+import { recordAuditLog } from '../utils/audit.js';
 
 const router = express.Router();
 
@@ -73,6 +74,13 @@ router.post('/import', requireAuth, async (req, res) => {
         );
       }
       await conn.commit();
+      recordAuditLog({
+        req,
+        action: 'content.import',
+        entityType: 'content',
+        entityId: 'backup.json',
+        details: { collections: Object.keys(payload).filter(k => ALLOWED_COLLECTIONS.has(k)) }
+      });
       res.json({ success: true, message: 'Data backup berhasil diimpor' });
     } catch (e) {
       await conn.rollback();
@@ -105,6 +113,14 @@ router.post('/:collection', requireAuth, async (req, res) => {
       [collection, JSON.stringify(data)]
     );
 
+    recordAuditLog({
+      req,
+      action: 'content.update',
+      entityType: 'content',
+      entityId: collection,
+      details: { items_count: Array.isArray(data) ? data.length : (typeof data === 'object' && data ? Object.keys(data).length : 1) }
+    });
+
     res.json({ success: true, message: 'Koleksi berhasil disimpan', data });
   } catch (err) {
     console.error('Save collection error:', err);
@@ -116,6 +132,13 @@ router.post('/:collection', requireAuth, async (req, res) => {
 router.delete('/all', requireAuth, async (req, res) => {
   try {
     await runSeed();
+    recordAuditLog({
+      req,
+      action: 'content.reset',
+      entityType: 'content',
+      entityId: 'all',
+      details: { action: 'reset_to_default_seed' }
+    });
     res.json({ success: true, message: 'Semua konten berhasil direset ke default' });
   } catch (err) {
     console.error('Reset all error:', err);

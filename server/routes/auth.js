@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 import { getPool } from '../db.js';
 import { requireAuth, JWT_SECRET } from '../middleware/auth.js';
+import { recordAuditLog } from '../utils/audit.js';
 import {
   generateSecret,
   generateTOTP,
@@ -59,12 +60,14 @@ router.post('/login', loginLimiter, async (req, res) => {
     const [rows] = await pool.query('SELECT * FROM admin_users WHERE email = ? LIMIT 1', [email.trim().toLowerCase()]);
 
     if (!rows || rows.length === 0) {
+      recordAuditLog({ req, action: 'auth.login.failed', entityType: 'auth', entityId: email, details: { reason: 'User not found' } });
       return res.status(401).json({ success: false, message: 'Email atau password salah' });
     }
 
     const user = rows[0];
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) {
+      recordAuditLog({ req, action: 'auth.login.failed', entityType: 'auth', entityId: user.email, user, details: { reason: 'Incorrect password' } });
       return res.status(401).json({ success: false, message: 'Email atau password salah' });
     }
 
@@ -75,6 +78,8 @@ router.post('/login', loginLimiter, async (req, res) => {
         JWT_SECRET,
         { expiresIn: '5m' }
       );
+
+      recordAuditLog({ req, action: 'auth.login.challenge_mfa', entityType: 'auth', entityId: user.email, user, details: { status: 'mfa_required' } });
 
       return res.json({
         success: true,
@@ -90,6 +95,8 @@ router.post('/login', loginLimiter, async (req, res) => {
       JWT_SECRET,
       { expiresIn: '7d' }
     );
+
+    recordAuditLog({ req, action: 'auth.login.success', entityType: 'auth', entityId: user.email, user, details: { method: 'password' } });
 
     res.json({
       success: true,
@@ -144,6 +151,7 @@ router.post('/mfa/verify-login', mfaLimiter, async (req, res) => {
 
       const check = verifyBackupCode(code, storedHashes);
       if (!check.valid) {
+        recordAuditLog({ req, action: 'auth.mfa.verify_failed', entityType: 'auth', entityId: user.email, user, details: { method: 'backup_code' } });
         return res.status(401).json({ success: false, message: 'Kode cadangan tidak valid atau sudah pernah digunakan' });
       }
 
@@ -155,6 +163,9 @@ router.post('/mfa/verify-login', mfaLimiter, async (req, res) => {
         JWT_SECRET,
         { expiresIn: '7d' }
       );
+
+      recordAuditLog({ req, action: 'auth.mfa.backup_code_used', entityType: 'auth', entityId: user.email, user, details: { remaining_codes: check.remaining.length } });
+
       return res.json({
         success: true,
         token,
@@ -172,6 +183,7 @@ router.post('/mfa/verify-login', mfaLimiter, async (req, res) => {
     // Skenario B: Kode 6-Digit Google Authenticator (TOTP)
     const isValid = verifyTOTP(code, user.totp_secret);
     if (!isValid) {
+      recordAuditLog({ req, action: 'auth.mfa.verify_failed', entityType: 'auth', entityId: user.email, user, details: { method: 'totp' } });
       return res.status(401).json({ success: false, message: 'Kode 6 digit Google Authenticator salah atau kedaluwarsa' });
     }
 
@@ -180,6 +192,8 @@ router.post('/mfa/verify-login', mfaLimiter, async (req, res) => {
       JWT_SECRET,
       { expiresIn: '7d' }
     );
+
+    recordAuditLog({ req, action: 'auth.login.success', entityType: 'auth', entityId: user.email, user, details: { method: 'totp' } });
     res.json({
       success: true,
       token,
@@ -285,6 +299,8 @@ router.post('/mfa/verify-setup', requireAuth, async (req, res) => {
       [tempSecret, JSON.stringify(hashed), req.user.id]
     );
 
+    recordAuditLog({ req, action: 'auth.mfa.setup', entityType: 'auth', entityId: req.user.email, user: req.user, details: { status: 'enabled' } });
+
     res.json({
       success: true,
       message: 'Google Authenticator MFA berhasil diaktifkan',
@@ -326,6 +342,8 @@ router.post('/mfa/disable', requireAuth, async (req, res) => {
       [req.user.id]
     );
 
+    recordAuditLog({ req, action: 'auth.mfa.disable', entityType: 'auth', entityId: user.email, user, details: { status: 'disabled' } });
+
     res.json({ success: true, message: 'Google Authenticator MFA berhasil dinonaktifkan' });
   } catch (err) {
     console.error('MFA disable error:', err);
@@ -360,6 +378,8 @@ router.post('/mfa/backup-codes', requireAuth, async (req, res) => {
     const { plain, hashed } = generateBackupCodes(8);
     await pool.query('UPDATE admin_users SET backup_codes = ? WHERE id = ?', [JSON.stringify(hashed), user.id]);
 
+    recordAuditLog({ req, action: 'auth.mfa.backup_codes_regenerated', entityType: 'auth', entityId: user.email, user, details: { count: 8 } });
+
     res.json({
       success: true,
       message: 'Kode cadangan baru berhasil dibuat',
@@ -377,6 +397,9 @@ router.get('/me', requireAuth, (req, res) => {
 
 // POST /api/auth/logout
 router.post('/logout', (req, res) => {
+  if (req.user) {
+    recordAuditLog({ req, action: 'auth.logout', entityType: 'auth', entityId: req.user.email, user: req.user });
+  }
   res.json({ success: true, message: 'Logged out' });
 });
 
@@ -394,6 +417,8 @@ router.patch('/password', requireAuth, async (req, res) => {
     const hash = await bcrypt.hash(password, 10);
     const pool = getPool();
     await pool.query('UPDATE admin_users SET password_hash = ? WHERE id = ?', [hash, req.user.id]);
+
+    recordAuditLog({ req, action: 'auth.password.change', entityType: 'auth', entityId: req.user.email, user: req.user });
 
     res.json({ success: true, message: 'Password berhasil diperbarui' });
   } catch (err) {
@@ -454,6 +479,14 @@ router.post('/users', requireAuth, async (req, res) => {
       'INSERT INTO admin_users (name, email, password_hash, role, mfa_enabled) VALUES (?, ?, ?, ?, 0)',
       [name.trim(), cleanEmail, hash, userRole]
     );
+
+    recordAuditLog({
+      req,
+      action: 'user.create',
+      entityType: 'user',
+      entityId: cleanEmail,
+      details: { id: result.insertId, name: name.trim(), email: cleanEmail, role: userRole }
+    });
 
     res.json({
       success: true,
@@ -518,6 +551,14 @@ router.patch('/users/:id', requireAuth, async (req, res) => {
     params.push(targetId);
     await pool.query(`UPDATE admin_users SET ${updates.join(', ')} WHERE id = ?`, params);
 
+    recordAuditLog({
+      req,
+      action: 'user.update',
+      entityType: 'user',
+      entityId: rows[0].email,
+      details: { id: targetId, email: rows[0].email, updated_fields: updates.map(u => u.split(' =')[0]) }
+    });
+
     res.json({ success: true, message: 'Data pengguna berhasil diperbarui' });
   } catch (err) {
     console.error('Update user error:', err);
@@ -541,7 +582,7 @@ router.delete('/users/:id', requireAuth, async (req, res) => {
 
     const pool = getPool();
     const [admins] = await pool.query("SELECT id FROM admin_users WHERE role = 'admin'");
-    const [targetUser] = await pool.query('SELECT role FROM admin_users WHERE id = ?', [targetId]);
+    const [targetUser] = await pool.query('SELECT role, email, name FROM admin_users WHERE id = ?', [targetId]);
     if (!targetUser || targetUser.length === 0) {
       return res.status(404).json({ success: false, message: 'Pengguna tidak ditemukan' });
     }
@@ -551,6 +592,15 @@ router.delete('/users/:id', requireAuth, async (req, res) => {
     }
 
     await pool.query('DELETE FROM admin_users WHERE id = ?', [targetId]);
+
+    recordAuditLog({
+      req,
+      action: 'user.delete',
+      entityType: 'user',
+      entityId: targetUser[0].email,
+      details: { id: targetId, email: targetUser[0].email, name: targetUser[0].name, role: targetUser[0].role }
+    });
+
     res.json({ success: true, message: 'Pengguna berhasil dihapus' });
   } catch (err) {
     console.error('Delete user error:', err);
@@ -569,7 +619,7 @@ router.post('/users/:id/reset-mfa', requireAuth, async (req, res) => {
     }
 
     const pool = getPool();
-    const [rows] = await pool.query('SELECT email FROM admin_users WHERE id = ? LIMIT 1', [targetId]);
+    const [rows] = await pool.query('SELECT email, name FROM admin_users WHERE id = ? LIMIT 1', [targetId]);
     if (!rows || rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Pengguna tidak ditemukan' });
     }
@@ -578,6 +628,14 @@ router.post('/users/:id/reset-mfa', requireAuth, async (req, res) => {
       'UPDATE admin_users SET mfa_enabled = 0, totp_secret = NULL, totp_temp_secret = NULL, backup_codes = NULL WHERE id = ?',
       [targetId]
     );
+
+    recordAuditLog({
+      req,
+      action: 'user.reset_mfa',
+      entityType: 'user',
+      entityId: rows[0].email,
+      details: { id: targetId, email: rows[0].email, name: rows[0].name }
+    });
 
     res.json({
       success: true,

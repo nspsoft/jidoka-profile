@@ -111,6 +111,44 @@ export async function initDB() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NULL,
+      user_email VARCHAR(128) NULL,
+      user_name VARCHAR(128) NULL,
+      role VARCHAR(32) NULL,
+      action VARCHAR(64) NOT NULL,
+      entity_type VARCHAR(64) NULL,
+      entity_id VARCHAR(128) NULL,
+      details LONGTEXT NULL,
+      ip_address VARCHAR(45) NULL,
+      user_agent VARCHAR(255) NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_audit_action (action),
+      INDEX idx_audit_created_at (created_at),
+      INDEX idx_audit_user_email (user_email),
+      INDEX idx_audit_entity (entity_type, entity_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS visitor_pageviews (
+      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+      session_hash VARCHAR(64) NOT NULL,
+      path VARCHAR(255) NOT NULL,
+      title VARCHAR(255) NULL,
+      referrer VARCHAR(255) NULL,
+      device_type VARCHAR(16) NOT NULL DEFAULT 'desktop',
+      browser VARCHAR(32) NOT NULL DEFAULT 'other',
+      os VARCHAR(32) NOT NULL DEFAULT 'other',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_visitor_hash_created (session_hash, created_at),
+      INDEX idx_visitor_path (path),
+      INDEX idx_visitor_created_at (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+
   return pool;
 }
 
