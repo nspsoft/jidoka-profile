@@ -4,9 +4,13 @@ import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// GET /api/audit-logs - List audit logs with pagination & filters
+// GET /api/audit-logs - List audit logs with pagination & filters (Admin Only)
 router.get('/', requireAuth, async (req, res) => {
   try {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Akses ditolak. Hanya Administrator yang dapat melihat jejak audit.' });
+    }
+
     const pool = getPool();
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const limit = Math.min(100, Math.max(5, parseInt(req.query.limit, 10) || 20));
@@ -79,9 +83,22 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/audit-logs/export - Export audit logs to CSV
+// Helper to sanitize CSV cells against Formula Injection (CWE-1236)
+function sanitizeCsvCell(str) {
+  let s = String(str == null ? '' : str);
+  if (/^[=\+\-@\t\r]/.test(s)) {
+    s = "'" + s;
+  }
+  return `"${s.replace(/"/g, '""')}"`;
+}
+
+// GET /api/audit-logs/export - Export audit logs to CSV (Admin Only)
 router.get('/export', requireAuth, async (req, res) => {
   try {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Akses ditolak. Hanya Administrator yang dapat mengekspor jejak audit.' });
+    }
+
     const pool = getPool();
     const { category, search, start_date, end_date } = req.query;
 
@@ -125,19 +142,18 @@ router.get('/export', requireAuth, async (req, res) => {
 
     for (const r of rows) {
       const timeStr = r.created_at ? new Date(r.created_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) : '';
-      const clean = str => `"${String(str || '').replace(/"/g, '""')}"`;
 
       csvLines.push([
         r.id,
-        clean(timeStr),
-        clean(r.user_name),
-        clean(r.user_email),
-        clean(r.role),
-        clean(r.action),
-        clean(r.entity_type),
-        clean(r.entity_id),
-        clean(r.ip_address),
-        clean(r.details)
+        sanitizeCsvCell(timeStr),
+        sanitizeCsvCell(r.user_name),
+        sanitizeCsvCell(r.user_email),
+        sanitizeCsvCell(r.role),
+        sanitizeCsvCell(r.action),
+        sanitizeCsvCell(r.entity_type),
+        sanitizeCsvCell(r.entity_id),
+        sanitizeCsvCell(r.ip_address),
+        sanitizeCsvCell(r.details)
       ].join(','));
     }
 

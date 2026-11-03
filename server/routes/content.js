@@ -56,6 +56,10 @@ router.get('/:collection', async (req, res) => {
 // POST /api/content/import - admin only, imports entire JSON backup blob
 router.post('/import', requireAuth, async (req, res) => {
   try {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Hanya Administrator yang memiliki wewenang mengimpor data backup' });
+    }
+
     const payload = req.body;
     if (typeof payload !== 'object' || !payload || Array.isArray(payload)) {
       return res.status(400).json({ success: false, message: 'Format JSON backup tidak valid' });
@@ -131,6 +135,10 @@ router.post('/:collection', requireAuth, async (req, res) => {
 // DELETE /api/content/all - admin only, reset to default
 router.delete('/all', requireAuth, async (req, res) => {
   try {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Hanya Administrator yang memiliki wewenang mereset seluruh data website' });
+    }
+
     await runSeed();
     recordAuditLog({
       req,

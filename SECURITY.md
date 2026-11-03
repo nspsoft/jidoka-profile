@@ -26,7 +26,9 @@ Sistem mengadopsi pendekatan *Zero-Trust* dan pertahanan berlapis (*Defense-in-D
   - **Proteksi Penonaktifan MFA**: Menonaktifkan MFA wajib menyertakan verifikasi ganda (kata sandi admin + kode 6-digit aktif) untuk mencegah penonaktifan sepihak saat sesi browser tidak sengaja ditinggal terbuka.
 - **Multi-User IAM & Granular RBAC**:
   - **Isolasi Penuh Antar-Akun**: Setiap pengguna admin memiliki baris terpisah di database (`admin_users`), dengan secret TOTP, status MFA, password hash (`bcrypt`), dan token sesi mandiri. Aktivasi atau penonaktifan MFA pada staf A tidak berpengaruh ke staf B.
-  - **Peran Akses (*Roles*)**: Mendukung peran `admin` (hak akses penuh ke konten, pengaturan sistem, dan kelola pengguna) serta `editor` (kelola konten website).
+  - **Pembagian Peran Ketat (*Double-Layer RBAC*)**:
+    - **Administrator**: Hak akses penuh (kelola konten website, kelola pengguna, inspeksi/ekspor audit log, reset MFA staf, hapus pesan RFQ, impor/reset backup).
+    - **Editor**: Khusus kelola konten website (produk, berita, profil). **Dilarang keras dan diblokir di level API** dari melihat/mengekspor jejak audit, menghapus pesan RFQ, mereset database konten, mengimpor backup, atau mengelola pengguna lain.
   - **Safeguard Anti-Self-Deletion & Anti-Orphan**: Sistem memblokir upaya admin menghapus akunnya sendiri, serta mencegah penghapusan jika hanya tersisa satu akun admin di sistem.
   - **Emergency Staff MFA Reset**: Apabila staf atau editor kehilangan ponselnya, SuperAdmin dapat me-reset status MFA akun terkait melalui modul *Kelola Pengguna* di Admin CMS tanpa perlu mengakses database secara manual. Staf kemudian dapat login kembali menggunakan kata sandinya dan menghubungkan ponsel barunya.
 - **Anti Brute-Force Rate Limiting**:
@@ -51,16 +53,23 @@ Sistem mengadopsi pendekatan *Zero-Trust* dan pertahanan berlapis (*Defense-in-D
 
 ### C. Integritas Data & Sanitasi Input (Anti-Injection)
 - **SQL Injection Prevention**:
-  - Seluruh query database MySQL di lapisan `server/db.js`, `auth.js`, `content.js`, dan `leads.js` menggunakan *parameterized queries* (placeholder `?`) dari driver `mysql2/promise`.
+  - Seluruh query database MySQL di lapisan `server/db.js`, `auth.js`, `content.js`, `leads.js`, `audit.js`, dan `analytics.js` menggunakan *parameterized queries* (placeholder `?`) dari driver `mysql2/promise`.
+- **CSV Formula Injection Mitigation (CWE-1236)**:
+  - Seluruh ekspor CSV (Audit Log & Laporan Pengunjung) diproteksi menggunakan fungsi `sanitizeCsvCell()`. Sel yang diawali dengan simbol formula spreadsheet (`=`, `+`, `-`, `@`, `\t`, `\r`) otomatis di-prefix dengan tanda petik tunggal (`'`) agar Microsoft Excel atau LibreOffice tidak mengeksekusi rumus berbahaya.
 - **Email & HTML Injection Prevention**:
   - Seluruh nilai isian formulir publik (`/api/leads`) dibersihkan melalui fungsi `escHtml()` sebelum disusun ke dalam template email notifikasi.
   - Karakter `<`, `>`, `&`, `"`, dan `'` dikonversi menjadi entitas HTML aman.
-- **Payload Flooding / DOS Protection**:
+- **Payload Flooding & String Cap Safeguards**:
   - Formulir leads dibatasi maksimal 30 field, dengan panjang maksimal 3.000 karakter per teks.
+  - Payload jejak audit dibatasi maksimal 50.000 karakter untuk mencegah serangan Denial of Service (DoS) memory/disk.
 - **Collection Name Whitelisting**:
   - Endpoint konten `/api/content/:collection` hanya menerima 14 nama koleksi resmi CMS (`company`, `products`, `pillars`, `why`, `industries`, `tour`, `news`, `way`, `certs`, `mach`, `caps`, `gov`, `hist`, `resources`) untuk mencegah pencemaran tabel database.
 
 ### D. Header Keamanan HTTP & Kebijakan CORS
+- **Trust Proxy Configuration**:
+  - Backend mengaktifkan `app.set('trust proxy', 1)` agar IP address asli pengunjung dari reverse proxy Nginx di aaPanel/VPS terbaca presisi oleh sistem rate limiting dan jejak audit.
+- **Strict Hostname CORS Validation**:
+  - Permintaan lintas domain (CORS) divalidasi secara ketat menggunakan parser URL (`new URL(origin).hostname`). Hanya domain resmi (`jidoka.co.id`, `*.jidoka.co.id`), `localhost`, dan domain yang terdaftar di `CORS_ORIGIN` yang diizinkan. Upaya pemalsuan domain (*domain infix spoofing* seperti `jidoka.co.id.attacker.com`) otomatis ditolak.
 - **HTTP Security Headers**:
   - `X-Content-Type-Options: nosniff`: Mencegah browser melakukan MIME-sniffing.
   - `X-Frame-Options: SAMEORIGIN`: Melindungi website dari serangan *Clickjacking*.
@@ -68,8 +77,6 @@ Sistem mengadopsi pendekatan *Zero-Trust* dan pertahanan berlapis (*Defense-in-D
   - `Referrer-Policy: strict-origin-when-cross-origin`: Melindungi data path URL referer.
 - **Fingerprint Suppression**:
   - Header `X-Powered-By: Express` dinonaktifkan (`app.disable('x-powered-by')`) agar penyerang tidak dapat mendeteksi teknologi backend yang digunakan.
-- **Restricted CORS**:
-  - Permintaan lintas domain (CORS) dibatasi hanya untuk domain resmi (`jidoka.co.id`, `https://jidoka.co.id`) serta lingkungan dev lokal yang sah.
 
 ### E. Jejak Audit & Privasi Pengunjung (Compliance & Privacy)
 - **Immutable Audit Trail (`audit_logs`)**:

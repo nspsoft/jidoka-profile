@@ -44,14 +44,19 @@ export async function recordAuditLog({ req, action, entityType = null, entityId 
       userAgent = String(req.headers['user-agent'] || '').slice(0, 255);
     }
 
-    const detailsStr = typeof details === 'object' && details !== null
+    const rawDetails = typeof details === 'object' && details !== null
       ? JSON.stringify(details)
       : (details ? String(details) : null);
+
+    const detailsStr = rawDetails ? rawDetails.slice(0, 50000) : null;
+    const cleanAction = String(action || 'unknown').slice(0, 64);
+    const cleanEntityType = entityType ? String(entityType).slice(0, 64) : null;
+    const cleanEntityId = entityId ? String(entityId).slice(0, 128) : '';
 
     await pool.query(
       `INSERT INTO audit_logs (user_id, user_email, user_name, role, action, entity_type, entity_id, details, ip_address, user_agent)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [userId, userEmail, userName, role, action, entityType, String(entityId || ''), detailsStr, ipAddress, userAgent]
+      [userId, userEmail, userName, role, cleanAction, cleanEntityType, cleanEntityId, detailsStr, ipAddress, userAgent]
     );
   } catch (err) {
     console.error('⚠️ [AUDIT LOG ERROR] Failed to record audit log:', err.message);

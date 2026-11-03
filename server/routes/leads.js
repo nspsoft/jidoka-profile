@@ -229,6 +229,10 @@ router.patch('/:id', requireAuth, async (req, res) => {
 // DELETE /api/leads/:id - admin only, delete lead
 router.delete('/:id', requireAuth, async (req, res) => {
   try {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Hanya Administrator yang memiliki wewenang menghapus pesan RFQ' });
+    }
+
     const { id } = req.params;
     const pool = getPool();
     await pool.query('DELETE FROM leads WHERE id = ?', [id]);

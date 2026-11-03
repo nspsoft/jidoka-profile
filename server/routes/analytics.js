@@ -49,9 +49,9 @@ router.post('/track', trackLimiter, async (req, res) => {
       .slice(0, 32);
 
     const body = req.body || {};
-    let path = String(body.path || '/').trim().slice(0, 255);
-    let title = String(body.title || '').trim().slice(0, 255);
-    let rawRef = String(body.referrer || req.headers['referer'] || '').trim();
+    let path = String(body.path || '/').trim().replace(/[\x00-\x1F\x7F]/g, '').slice(0, 255);
+    let title = String(body.title || '').trim().replace(/[\x00-\x1F\x7F]/g, '').slice(0, 255);
+    let rawRef = String(body.referrer || req.headers['referer'] || '').trim().replace(/[\x00-\x1F\x7F]/g, '').slice(0, 500);
 
     // Categorize referrer source
     let referrer = 'Direct / Langsung';
@@ -243,6 +243,15 @@ router.get('/summary', requireAuth, async (req, res) => {
   }
 });
 
+// Helper to sanitize CSV cells against Formula Injection (CWE-1236)
+function sanitizeCsvCell(str) {
+  let s = String(str == null ? '' : str);
+  if (/^[=\+\-@\t\r]/.test(s)) {
+    s = "'" + s;
+  }
+  return `"${s.replace(/"/g, '""')}"`;
+}
+
 // GET /api/analytics/export - Export daily visitor trend to CSV
 router.get('/export', requireAuth, async (req, res) => {
   try {
@@ -280,7 +289,11 @@ router.get('/export', requireAuth, async (req, res) => {
     const csvLines = [headers.join(',')];
 
     for (const r of rows) {
-      csvLines.push([r.tanggal, r.total_kunjungan, r.pengunjung_unik].join(','));
+      csvLines.push([
+        sanitizeCsvCell(r.tanggal),
+        r.total_kunjungan,
+        r.pengunjung_unik
+      ].join(','));
     }
 
     const csvContent = '\uFEFF' + csvLines.join('\r\n');

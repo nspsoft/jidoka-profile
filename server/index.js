@@ -23,6 +23,9 @@ const PORT = Number(process.env.PORT) || 3002;
 // Hide Express fingerprinting
 app.disable('x-powered-by');
 
+// Trust reverse proxy (Nginx on aaPanel / VPS) for accurate IP resolution in rate limiting & audit logs
+app.set('trust proxy', 1);
+
 // Security Headers Middleware
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -32,7 +35,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Controlled CORS Policy
+// Controlled CORS Policy with strict origin hostname validation (anti-subdomain/infix spoofing)
 const allowedOrigins = (process.env.CORS_ORIGIN || '')
   .split(',')
   .map(s => s.trim().toLowerCase())
@@ -42,14 +45,21 @@ app.use(cors({
   origin: (origin, callback) => {
     // Allow non-browser requests or local scripts
     if (!origin) return callback(null, true);
-    const low = origin.toLowerCase();
-    if (
-      low.includes('jidoka.co.id') ||
-      low.includes('localhost') ||
-      low.includes('127.0.0.1') ||
-      allowedOrigins.includes(low)
-    ) {
-      return callback(null, true);
+    try {
+      const parsed = new URL(origin);
+      const host = parsed.hostname.toLowerCase();
+      if (
+        host === 'jidoka.co.id' ||
+        host.endsWith('.jidoka.co.id') ||
+        host === 'localhost' ||
+        host === '127.0.0.1' ||
+        allowedOrigins.includes(origin.toLowerCase()) ||
+        allowedOrigins.includes(host)
+      ) {
+        return callback(null, true);
+      }
+    } catch (e) {
+      // Invalid URL syntax
     }
     return callback(new Error('Blocked by CORS security policy'));
   },

@@ -72,12 +72,13 @@ router.post('/', requireAuth, (req, res, next) => {
     const file = req.file;
     const ext = path.extname(file.originalname).toLowerCase();
 
-    // Deep inspection for SVG to block Stored XSS vectors
+    // Deep inspection for SVG to block Stored XSS & XXE vectors
     if (ext === '.svg') {
       const content = fs.readFileSync(file.path, 'utf8');
-      if (/<script|javascript:|data:text\/html|\bon[a-z]+\s*=/i.test(content)) {
+      const dangerousSvg = /<script|javascript:|data:text\/(html|xml)|\bon[a-z]+\s*=|<!entity|<iframe|<object|<embed|<foreignobject|href\s*=\s*['"]\s*javascript:/i;
+      if (dangerousSvg.test(content)) {
         try { fs.unlinkSync(file.path); } catch (e) {}
-        return res.status(400).json({ success: false, message: 'File SVG mengandung skrip berbahaya yang dilarang' });
+        return res.status(400).json({ success: false, message: 'File SVG mengandung elemen berbahaya atau skrip yang dilarang' });
       }
     }
 
